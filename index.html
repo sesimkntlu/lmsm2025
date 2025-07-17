@@ -1,0 +1,633 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Demographic Dashboard Report</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+        <style>
+            body {
+                font-family: 'Inter', sans-serif;
+            }
+            
+            body {
+                background-image: url('AY1A8030.jpg');
+                background-size: cover;
+                background-repeat: no-repeat;
+                background-position: center center;
+                background-attachment: fixed;
+            }
+            .bg-white, .bg-blue-50 {
+                background-color: rgba(255, 255, 255, 0.9);
+            }
+            header, footer {
+                position: relative;
+                z-index: 10;
+            }
+            .text-indigo-800, .text-indigo-700, .text-blue-600, .text-gray-800 {
+                text-shadow: 0px 0px 2px rgba(255,255,255,0.7);
+            }
+        
+            .max-h-40 {max-height: 10rem;}
+            .overflow-y-auto {overflow-y: auto;}
+            canvas {
+                max-width: 100%;
+                height: 250px;
+            }
+            .chart-container {
+                position: relative;
+                height: 250px;
+                width: 100%;
+            }
+            /* Custom table styles for better appearance and sticky header */
+            .detailed-table-wrapper {
+                overflow-x: auto;
+                overflow-y: auto;
+                max-height: 500px; /* Adjust as needed */
+                border-radius: 0.5rem;
+                border: 1px solid #e2e8f0; /* gray-200 */
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            .detailed-table-wrapper table {
+                min-width: 100%;
+                border-collapse: collapse;
+            }
+            .detailed-table-wrapper thead {
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                background-color: #eff6ff; /* blue-50 */
+            }
+            .detailed-table-wrapper th {
+                padding: 0.75rem 1.5rem; /* px-6 py-3 */
+                text-align: left;
+                font-size: 0.75rem; /* text-xs */
+                font-weight: 500; /* font-medium */
+                color: #1d4ed8; /* blue-700 */
+                text-transform: uppercase;
+                letter-spacing: 0.05em; /* tracking-wider */
+                border-bottom: 1px solid #cbd5e0; /* gray-300 */
+            }
+            .detailed-table-wrapper td {
+                padding: 1rem 1.5rem; /* px-6 py-4 */
+                white-space: nowrap;
+                font-size: 0.875rem; /* text-sm */
+                color: #1f2937; /* gray-900 */
+                border-bottom: 1px solid #f3f4f6; /* gray-100 */
+            }
+            .detailed-table-wrapper tbody tr:last-child td {
+                border-bottom: none;
+            }
+            .detailed-table-wrapper tbody tr:hover {
+                background-color: #f9fafb; /* gray-50 */
+            }
+            .pagination-controls button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+        </style>
+    </head>
+    <body class="min-h-screen p-6 text-gray-800"> <header class="text-center mb-10">
+            <h1 class="text-5xl font-extrabold text-indigo-600 mb-2 rounded-lg p-2 shadow-sm">
+                Relatóriu Atuál Progresu Rejistrasaun Selebrasaun LMSM 2025
+            </h1>
+            <p class="text-lg font-extrabold text-indigo-700">SESIM-KNTLU</p>
+        </header>
+
+        <section class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"> <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1 flex flex-col items-center justify-center">
+                <h2 class="text-2xl font-bold text-indigo-500 mb-3">🏙️ Munisípiu</h2>
+                <p id="totalMunicipality" class="text-5xl font-extrabold text-purple-600"></p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1 flex flex-col items-center justify-center">
+                <h2 class="text-2xl font-bold text-indigo-500 mb-3">👥 Seksu</h2>
+                <p id="totalGender" class="text-5xl font-extrabold text-purple-600"></p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1 flex flex-col items-center justify-center">
+                <h2 class="text-2xl font-bold text-indigo-500 mb-3">📚 Dixiplina</h2>
+                <p id="totalDiscipline" class="text-5xl font-extrabold text-purple-600"></p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1 flex flex-col items-center justify-center">
+                <h2 class="text-2xl font-bold text-indigo-500 mb-3">Tópiku LMSM</h2> <p id="totalTopiku" class="text-5xl font-extrabold text-purple-600"></p>
+            </div>
+        </section>
+
+        <section id="summary-section" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1">
+                <h2 class="text-2xl font-bold text-indigo-500 mb-3">Persentajen tuir Jéneru</h2>
+                <div class="chart-container">
+                    <canvas id="genderChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1">
+                <h2 class="text-2xl font-bold text-indigo-700 mb-3">Distribuisaun tuir Idade</h2>
+                <div class="chart-container">
+                    <canvas id="ageChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1">
+                <h2 class="text-2xl font-bold text-indigo-700 mb-3">Tópiku tuir kada Dixiplina</h2>
+                <div class="chart-container">
+                    <canvas id="disciplineChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1">
+                <h2 class="text-2xl font-bold text-indigo-700 mb-3">Distribuisaun Tópiku tuir Nivel Eskola</h2>
+                <div class="chart-container">
+                    <canvas id="schoolLevelChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1 md:col-span-2 lg:col-span-2">
+                <h2 class="text-2xl font-bold text-indigo-700 mb-3">Distribuisaun Tópiku tuir Munisípiu</h2>
+                <div class="chart-container">
+                    <canvas id="municipalityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1 md:col-span-2 lg:col-span-2">
+                <h2 class="text-2xl font-bold text-indigo-700 mb-3">Tabela kona-ba eskola ne'ebé rejistu hosi kada Munisípiu</h2>
+                <div class="max-h-60 overflow-y-auto rounded-lg border border-gray-200 shadow-sm">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-blue-50">
+                            <tr>
+                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Munisípiu</th>
+                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Naran Eskola</th>
+                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Totál</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-100" id="schoolMunicipalityTableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-lg mb-10">
+            <h2 class="text-3xl font-bold text-indigo-800 mb-6">Tabela informasaun detallu kona-ba partisipante ne'ebe rejistu</h2>
+
+            <div class="mb-6 flex flex-wrap items-center gap-4">
+                <label for="nivelEskolaFilter" class="text-lg font-semibold text-gray-700">
+                    Filtru tuir Nivel Eskola:
+                </label>
+                <select
+                    id="nivelEskolaFilter"
+                    class="p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 text-gray-700 bg-white"
+                >
+                    </select>
+
+                <label for="munisipiuFilter" class="text-lg font-semibold text-gray-700">
+                    Filtru tuir Munisípiu:
+                </label>
+                <select
+                    id="munisipiuFilter"
+                    class="p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 text-gray-700 bg-white"
+                >
+                    </select>
+
+                <label for="detailedTableSearch" class="sr-only">Search</label>
+                <div class="relative flex-grow">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        id="detailedTableSearch"
+                        placeholder="Buka dadus..."
+                        class="pl-10 p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 w-full text-gray-700"
+                    >
+                </div>
+
+                
+                <select
+                    id="rowsPerPage"
+                    class="p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 text-gray-700 bg-white"
+                >
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="All">Hotu</option>
+                </select>
+            </div>
+
+            <div id="detailed-table-container" class="detailed-table-wrapper">
+                </div>
+
+            <div class="flex justify-between items-center mt-4">
+                <button
+                    id="prevPage"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                    Anterior
+                </button>
+                <span class="text-gray-700">Pájina <span id="currentPageSpan">1</span> hosi <span id="totalPagesSpan">1</span></span>
+                <button
+                    id="nextPage"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                    Tuirmai
+                </button>
+            </div>
+        </section>
+
+        <footer class="text-center text-gray-600 text-sm mt-10">
+            <p>&copy; Relatóriu Atuál Rejistrasaun LMSM 2025, SESIM-KNTLU. All rights reserved.</p>
+        </footer>
+
+        <script>
+            // Register Chart.js Datalabels plugin globally
+            Chart.register(ChartDataLabels);
+
+            // Embed the processed data directly into a JavaScript variable
+            const dashboardData = {"totalMunicipality": 8, "municipalityChartData": {"labels": ["Aileu", "Baucau", "Dili", "Ermera", "Laut\u00e9m", "Liqui\u00e7a", "Manatuto", "Manufahi"], "data": [6, 2, 43, 10, 3, 20, 1, 6]}, "totalGender": 193, "genderChartData": {"labels": ["Feto", "Mane"], "data": [103, 90], "percentages": ["53.4%", "46.6%"]}, "ageDistribution": {"13": 11, "15": 28, "14": 15, "12": 6, "18": 22, "16": 15, "17": 44, "19": 21, "25": 3, "21": 2, "26": 1, "42": 1, "20": 3, "24": 4, "23": 5, "28": 2, "29": 3, "22": 2, "27": 1}, "ageChartData": {"labels": ["12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "42"], "data": [6, 11, 15, 28, 15, 44, 22, 21, 3, 2, 2, 5, 4, 3, 1, 1, 2, 3, 1]}, "schoolLevelCounts": {"Ensinu B\u00e1ziku": 24, "Ensinu Sekund\u00e1riu": 55, "Universit\u00e1riu": 12}, "schoolLevelChartData": {"labels": ["Ensinu B\u00e1ziku", "Ensinu Sekund\u00e1riu", "Universit\u00e1riu"], "data": [24, 55, 12]}, "schoolMunicipalityTableData": [{"Munisipiu": "Aileu", "Naran Eskola": "EBC 1, 2, 3 Roluli, Remexio, Aileu", "Total": 3}, {"Munisipiu": "Aileu", "Naran Eskola": "EBC 1,2, 3 Dom Baumeta, Aileu", "Total": 3}, {"Munisipiu": "Baucau", "Naran Eskola": "ESGP 01 Baucau", "Total": 2}, {"Munisipiu": "Dili", "Naran Eskola": "", "Total": 1}, {"Munisipiu": "Dili", "Naran Eskola": "(UNTL) Fakuldade: Edukasaun Arte E Humanidade. Departamentu: Ensinu De Biolojia", "Total": 3}, {"Munisipiu": "Dili", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Total": 12}, {"Munisipiu": "Dili", "Naran Eskola": "ESG 10 de Dezembro, Dili", "Total": 5}, {"Munisipiu": "Dili", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Total": 9}, {"Munisipiu": "Dili", "Naran Eskola": "ESG Nicolau Lobato, Dili", "Total": 1}, {"Munisipiu": "Dili", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Total": 5}, {"Munisipiu": "Dili", "Naran Eskola": "UNDIL", "Total": 1}, {"Munisipiu": "Dili", "Naran Eskola": "UNPAZ", "Total": 1}, {"Munisipiu": "Dili", "Naran Eskola": "UNTL", "Total": 5}, {"Munisipiu": "Ermera", "Naran Eskola": "EBF Dato Suco Urahou, Ermera", "Total": 1}, {"Munisipiu": "Ermera", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Total": 9}, {"Munisipiu": "Laut\u00e9m", "Naran Eskola": "ESG. Nino Konis Santana, Lospalos", "Total": 3}, {"Munisipiu": "Liqui\u00e7a", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Total": 20}, {"Munisipiu": "Manatuto", "Naran Eskola": "UNTL", "Total": 1}, {"Munisipiu": "Manufahi", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Total": 6}], "totalDiscipline": 9, "disciplineCounts": {"Matem\u00e1tika": 21, "K\u00edmika": 23, "Jeolojia": 6, "Biolojia": 22, "F\u00edzika": 15, "Publik speaking": 1, "Enje\u00f1aria Siv\u00edl": 1, "Agr\u00edkola": 1, "Si\u00e9nsia Komputad\u00f3r": 1}, "disciplineChartData": {"labels": ["K\u00edmika", "Biolojia", "Matem\u00e1tika", "F\u00edzika", "Jeolojia", "Publik speaking", "Enje\u00f1aria Siv\u00edl", "Agr\u00edkola", "Si\u00e9nsia Komputad\u00f3r"], "data": [23, 22, 21, 15, 6, 1, 1, 1, 1]}, "totalTopiku": 87, "allNivelEskolaOptions": ["All", "Ensinu B\u00e1ziku", "Ensinu Sekund\u00e1riu", "Universit\u00e1riu"], "allMunisipiuOptions": ["All", "Aileu", "Baucau", "Dili", "Ermera", "Laut\u00e9m", "Liqui\u00e7a", "Manatuto", "Manufahi"], "detailedTableData": [{"id": "0-1", "Timestamp": "6/20/2025 21:45:07", "Munisipiu": "Aileu", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Roluli, Remexio, Aileu", "Naran Kanorin": "Gen\u00e9lio Miguel R\u00eago Mendon\u00e7a", "Seksu": "Mane", "Idade": "13", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Adisaun No Subtrasaun N\u00fameru Inteiru Iha Li\u00f1a Num\u00e9rika (Reta Num\u00e9rica) Tolu (3)", "Dokumentus": "https://drive.google.com/open?id=18FNGKS3FNrUXsdN7IlfRmMGmhQEjNZLX"}, {"id": "0-2", "Timestamp": "6/20/2025 21:45:07", "Munisipiu": "Aileu", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Roluli, Remexio, Aileu", "Naran Kanorin": "Totino Martins", "Seksu": "Mane", "Idade": "15", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Adisaun No Subtrasaun N\u00fameru Inteiru Iha Li\u00f1a Num\u00e9rika (Reta Num\u00e9rica) Tolu (3)", "Dokumentus": "https://drive.google.com/open?id=18FNGKS3FNrUXsdN7IlfRmMGmhQEjNZLX"}, {"id": "0-3", "Timestamp": "6/20/2025 21:45:07", "Munisipiu": "Aileu", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Roluli, Remexio, Aileu", "Naran Kanorin": "Ernestina de Jesus", "Seksu": "Feto", "Idade": "14", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Adisaun No Subtrasaun N\u00fameru Inteiru Iha Li\u00f1a Num\u00e9rika (Reta Num\u00e9rica) Tolu (3)", "Dokumentus": "https://drive.google.com/open?id=18FNGKS3FNrUXsdN7IlfRmMGmhQEjNZLX"}, {"id": "1-1", "Timestamp": "6/20/2025 22:12:29", "Munisipiu": "Aileu", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Roluli, Remexio, Aileu", "Naran Kanorin": "Maxiliana Silva Pinto Correia", "Seksu": "Feto", "Idade": "13", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Kubu Origami Hosi Surat-Tahan Hodi Aprende Pot\u00e9nsiasaun No Raiz K\u00fabiku", "Dokumentus": "https://drive.google.com/open?id=1JXRE-AuiUgwfFSIad0jkCsYSDzOH5xUx"}, {"id": "1-2", "Timestamp": "6/20/2025 22:12:29", "Munisipiu": "Aileu", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Roluli, Remexio, Aileu", "Naran Kanorin": "Nelio Pinto", "Seksu": "Mane", "Idade": "12", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Kubu Origami Hosi Surat-Tahan Hodi Aprende Pot\u00e9nsiasaun No Raiz K\u00fabiku", "Dokumentus": "https://drive.google.com/open?id=1JXRE-AuiUgwfFSIad0jkCsYSDzOH5xUx"}, {"id": "1-3", "Timestamp": "6/20/2025 22:12:29", "Munisipiu": "Aileu", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Roluli, Remexio, Aileu", "Naran Kanorin": "Valriano Soares Gabriel Alves", "Seksu": "Mane", "Idade": "13", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Kubu Origami Hosi Surat-Tahan Hodi Aprende Pot\u00e9nsiasaun No Raiz K\u00fabiku", "Dokumentus": "https://drive.google.com/open?id=1JXRE-AuiUgwfFSIad0jkCsYSDzOH5xUx"}, {"id": "2-1", "Timestamp": "6/24/2025 23:16:12", "Munisipiu": "Aileu", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Roluli, Remexio, Aileu", "Naran Kanorin": "Jen\u00e9via Freitas da Silva", "Seksu": "Feto", "Idade": "15", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Verifika Di\u00e1metru Pipa PVC No Determina Di\u00e1metru Lata Susu Ben", "Dokumentus": "https://drive.google.com/open?id=168N7eg1OhdOg4yjSFTT6hdFM56Y3rQ7J"}, {"id": "2-2", "Timestamp": "6/24/2025 23:16:12", "Munisipiu": "Aileu", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Roluli, Remexio, Aileu", "Naran Kanorin": "Ediana Guterres Mendon\u00e7a", "Seksu": "Feto", "Idade": "15", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Verifika Di\u00e1metru Pipa PVC No Determina Di\u00e1metru Lata Susu Ben", "Dokumentus": "https://drive.google.com/open?id=168N7eg1OhdOg4yjSFTT6hdFM56Y3rQ7J"}, {"id": "2-3", "Timestamp": "6/24/2025 23:16:12", "Munisipiu": "Aileu", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Roluli, Remexio, Aileu", "Naran Kanorin": "Getrudes Viegas Mendon\u00e7a", "Seksu": "Feto", "Idade": "14", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Verifika Di\u00e1metru Pipa PVC No Determina Di\u00e1metru Lata Susu Ben", "Dokumentus": "https://drive.google.com/open?id=168N7eg1OhdOg4yjSFTT6hdFM56Y3rQ7J"}, {"id": "3-1", "Timestamp": "6/25/2025 10:08:47", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 10 de Dezembro, Dili", "Naran Kanorin": "Frederico Hala Bosco", "Seksu": "Mane", "Idade": "15", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Halo Ventui\u00f1a hosi Kaixa At", "Dokumentus": ""}, {"id": "3-2", "Timestamp": "6/25/2025 10:08:47", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 10 de Dezembro, Dili", "Naran Kanorin": "Neticia Celeste Caldas", "Seksu": "Feto", "Idade": "18", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Halo Ventui\u00f1a hosi Kaixa At", "Dokumentus": ""}, {"id": "4-1", "Timestamp": "6/25/2025 10:15:08", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 10 de Dezembro, Dili", "Naran Kanorin": "Frederico Hala Bosco", "Seksu": "Mane", "Idade": "15", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Halo Penahan Tefone Uza Sedotan", "Dokumentus": ""}, {"id": "4-2", "Timestamp": "6/25/2025 10:15:08", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 10 de Dezembro, Dili", "Naran Kanorin": "Neticia Celeste Caldas", "Seksu": "Feto", "Idade": "18", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Halo Penahan Tefone Uza Sedotan", "Dokumentus": ""}, {"id": "5-1", "Timestamp": "6/26/2025 10:13:39", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Justino M. X. Quintao", "Seksu": "Mane", "Idade": "16", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Redi Hodi Soma Nia Vet\u00f3r", "Dokumentus": "https://drive.google.com/open?id=1k42RhsdQIkEu_2Jej12irftBlu3hieMg"}, {"id": "5-2", "Timestamp": "6/26/2025 10:13:39", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Leontino M. Lete", "Seksu": "Mane", "Idade": "17", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Redi Hodi Soma Nia Vet\u00f3r", "Dokumentus": "https://drive.google.com/open?id=1k42RhsdQIkEu_2Jej12irftBlu3hieMg"}, {"id": "5-3", "Timestamp": "6/26/2025 10:13:39", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Jeto Francisko", "Seksu": "Mane", "Idade": "17", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Redi Hodi Soma Nia Vet\u00f3r", "Dokumentus": "https://drive.google.com/open?id=1k42RhsdQIkEu_2Jej12irftBlu3hieMg"}, {"id": "6-1", "Timestamp": "6/26/2025 10:27:44", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Davia Margarida Antonio Sequeira", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Movimentu Plaka Tekt\u00f3niku", "Dokumentus": "https://drive.google.com/open?id=1rPfqk9VAk3Km1eaM6K25W1RnDCxor6tO"}, {"id": "6-2", "Timestamp": "6/26/2025 10:27:44", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Julia Manuela P. S. Araujo", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Movimentu Plaka Tekt\u00f3niku", "Dokumentus": "https://drive.google.com/open?id=1rPfqk9VAk3Km1eaM6K25W1RnDCxor6tO"}, {"id": "6-3", "Timestamp": "6/26/2025 10:27:44", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Jofelia E. Alves Barreto", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Movimentu Plaka Tekt\u00f3niku", "Dokumentus": "https://drive.google.com/open?id=1rPfqk9VAk3Km1eaM6K25W1RnDCxor6tO"}, {"id": "7-1", "Timestamp": "6/26/2025 10:59:34", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Marlanggen T. Jumino", "Seksu": "Feto", "Idade": "16", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Eskeletu Manu Nia Ruin", "Dokumentus": "https://drive.google.com/open?id=1fT7kswMuekL61XoFU-El29_-IFc1ZLRd"}, {"id": "7-2", "Timestamp": "6/26/2025 10:59:34", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Natercia F. Tilman", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Eskeletu Manu Nia Ruin", "Dokumentus": "https://drive.google.com/open?id=1fT7kswMuekL61XoFU-El29_-IFc1ZLRd"}, {"id": "7-3", "Timestamp": "6/26/2025 10:59:34", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Pascual dos Santos Martins", "Seksu": "Mane", "Idade": "16", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Eskeletu Manu Nia Ruin", "Dokumentus": "https://drive.google.com/open?id=1fT7kswMuekL61XoFU-El29_-IFc1ZLRd"}, {"id": "8-1", "Timestamp": "6/26/2025 11:30:16", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Alvionita Marcal", "Seksu": "Feto", "Idade": "15", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Prosesu Infiltrasaun Bee Fo'er Sai Ba Bee Moos Hodi Bele Konsumu", "Dokumentus": "https://drive.google.com/open?id=1lpDLbd-P7ljTr6TDrwsQbF7RhWZXbqzW"}, {"id": "8-2", "Timestamp": "6/26/2025 11:30:16", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Claudina da Costa Soriano", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Prosesu Infiltrasaun Bee Fo'er Sai Ba Bee Moos Hodi Bele Konsumu", "Dokumentus": "https://drive.google.com/open?id=1lpDLbd-P7ljTr6TDrwsQbF7RhWZXbqzW"}, {"id": "8-3", "Timestamp": "6/26/2025 11:30:16", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Deonillia Alves Babo", "Seksu": "Feto", "Idade": "19", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Prosesu Infiltrasaun Bee Fo'er Sai Ba Bee Moos Hodi Bele Konsumu", "Dokumentus": "https://drive.google.com/open?id=1lpDLbd-P7ljTr6TDrwsQbF7RhWZXbqzW"}, {"id": "9-1", "Timestamp": "6/26/2025 11:44:38", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Demetrio S. Martins", "Seksu": "Mane", "Idade": "18", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Produsaun Oksij\u00e9niu hosi Ai-Horis", "Dokumentus": "https://drive.google.com/open?id=17RM6k6A9irLdxmA266bMZqpNxwEa4bmT"}, {"id": "9-2", "Timestamp": "6/26/2025 11:44:38", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Alfredo Martins Maia", "Seksu": "Mane", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Produsaun Oksij\u00e9niu hosi Ai-Horis", "Dokumentus": "https://drive.google.com/open?id=17RM6k6A9irLdxmA266bMZqpNxwEa4bmT"}, {"id": "9-3", "Timestamp": "6/26/2025 11:44:38", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Dores Martins Babo Soares", "Seksu": "Mane", "Idade": "18", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Produsaun Oksij\u00e9niu hosi Ai-Horis", "Dokumentus": "https://drive.google.com/open?id=17RM6k6A9irLdxmA266bMZqpNxwEa4bmT"}, {"id": "10-1", "Timestamp": "6/26/2025 12:01:17", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Agustinha Martins Maia", "Seksu": "Feto", "Idade": "19", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Uza Ph Meter Hodi Identifika Kualidade Be", "Dokumentus": "https://drive.google.com/open?id=1ULJCyueGvtBu4N58QSLFNMV0zbs-EP8g"}, {"id": "10-2", "Timestamp": "6/26/2025 12:01:17", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Carmen A. M. Amaral", "Seksu": "Feto", "Idade": "16", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Uza Ph Meter Hodi Identifika Kualidade Be", "Dokumentus": "https://drive.google.com/open?id=1ULJCyueGvtBu4N58QSLFNMV0zbs-EP8g"}, {"id": "10-3", "Timestamp": "6/26/2025 12:01:17", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Angelino Lima de Jesus", "Seksu": "Mane", "Idade": "18", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Uza Ph Meter Hodi Identifika Kualidade Be", "Dokumentus": "https://drive.google.com/open?id=1ULJCyueGvtBu4N58QSLFNMV0zbs-EP8g"}, {"id": "11-1", "Timestamp": "6/26/2025 12:20:13", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Noelia Maria Jose Soares", "Seksu": "Feto", "Idade": "15", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Fosil Hosi Planta (Ai-Horis)", "Dokumentus": "https://drive.google.com/open?id=1CaWR0SYnJtBM2U-S86pgCMHy-h0wigT7"}, {"id": "11-2", "Timestamp": "6/26/2025 12:20:13", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Nidia dos Santos Madeira", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Fosil Hosi Planta (Ai-Horis)", "Dokumentus": "https://drive.google.com/open?id=1CaWR0SYnJtBM2U-S86pgCMHy-h0wigT7"}, {"id": "11-3", "Timestamp": "6/26/2025 12:20:13", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Natercia Soares do Espirito Santo", "Seksu": "Feto", "Idade": "14", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Fosil Hosi Planta (Ai-Horis)", "Dokumentus": "https://drive.google.com/open?id=1CaWR0SYnJtBM2U-S86pgCMHy-h0wigT7"}, {"id": "12-1", "Timestamp": "6/26/2025 13:35:18", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Leonito M. Nunes", "Seksu": "Mane", "Idade": "14", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Multiplikasaun Uza Ai-Kesak", "Dokumentus": "https://drive.google.com/open?id=1l7k0QjJl31ivvYgE9VCzJS1UZpc30vOw"}, {"id": "12-2", "Timestamp": "6/26/2025 13:35:18", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Natalino Pereira Silva", "Seksu": "Mane", "Idade": "13", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Multiplikasaun Uza Ai-Kesak", "Dokumentus": "https://drive.google.com/open?id=1l7k0QjJl31ivvYgE9VCzJS1UZpc30vOw"}, {"id": "12-3", "Timestamp": "6/26/2025 13:35:18", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Ferdiano Raul de A. Soares", "Seksu": "Mane", "Idade": "13", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Multiplikasaun Uza Ai-Kesak", "Dokumentus": "https://drive.google.com/open?id=1l7k0QjJl31ivvYgE9VCzJS1UZpc30vOw"}, {"id": "13-1", "Timestamp": "6/26/2025 13:45:00", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Joana de Ara\u00fajo Soares", "Seksu": "Feto", "Idade": "12", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Deskobre Konseitu Matem\u00e1tika Iha Jogu Si\u2019ik Ema Nia Hanoin", "Dokumentus": "https://drive.google.com/open?id=1N8rG5OJPGxSE_MjuVEogo9HiCNhwb49p"}, {"id": "13-2", "Timestamp": "6/26/2025 13:45:00", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Safira Mendon\u00e7a Soares", "Seksu": "Feto", "Idade": "N/A", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Deskobre Konseitu Matem\u00e1tika Iha Jogu Si\u2019ik Ema Nia Hanoin", "Dokumentus": "https://drive.google.com/open?id=1N8rG5OJPGxSE_MjuVEogo9HiCNhwb49p"}, {"id": "13-3", "Timestamp": "6/26/2025 13:45:00", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Jefri de Andrade", "Seksu": "Mane", "Idade": "14", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Deskobre Konseitu Matem\u00e1tika Iha Jogu Si\u2019ik Ema Nia Hanoin", "Dokumentus": "https://drive.google.com/open?id=1N8rG5OJPGxSE_MjuVEogo9HiCNhwb49p"}, {"id": "14-1", "Timestamp": "6/26/2025 13:55:41", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "C\u00e9lizio Mendon\u00e7a Amaral", "Seksu": "Mane", "Idade": "12", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza \u00c1baco Hodi Aprende Konseitu Adisaun No Subtrasaun", "Dokumentus": "https://drive.google.com/open?id=1QSfXLh34QduI84PaOivLFj5-NrBV4I8q"}, {"id": "14-2", "Timestamp": "6/26/2025 13:55:41", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Mainin\u00e9sio da Silva Pereira", "Seksu": "Mane", "Idade": "12", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza \u00c1baco Hodi Aprende Konseitu Adisaun No Subtrasaun", "Dokumentus": "https://drive.google.com/open?id=1QSfXLh34QduI84PaOivLFj5-NrBV4I8q"}, {"id": "14-3", "Timestamp": "6/26/2025 13:55:41", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Riquelme Soares Martins", "Seksu": "Mane", "Idade": "13", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza \u00c1baco Hodi Aprende Konseitu Adisaun No Subtrasaun", "Dokumentus": "https://drive.google.com/open?id=1QSfXLh34QduI84PaOivLFj5-NrBV4I8q"}, {"id": "15-1", "Timestamp": "6/26/2025 14:05:10", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Luzito do Rego Quint\u00e3o", "Seksu": "Mane", "Idade": "14", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Lafatik Hodi Aprende Konseitu Seku\u00e9nsia Regularidade", "Dokumentus": "https://drive.google.com/open?id=1bOv0av2IapX1yWx9hgNIH-pQf0Cubq4d"}, {"id": "15-2", "Timestamp": "6/26/2025 14:05:10", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Mariana de Ara\u00fajo", "Seksu": "Feto", "Idade": "13", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Lafatik Hodi Aprende Konseitu Seku\u00e9nsia Regularidade", "Dokumentus": "https://drive.google.com/open?id=1bOv0av2IapX1yWx9hgNIH-pQf0Cubq4d"}, {"id": "15-3", "Timestamp": "6/26/2025 14:05:10", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "N\u00e1dia de Jesus Tilman", "Seksu": "Feto", "Idade": "12", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Lafatik Hodi Aprende Konseitu Seku\u00e9nsia Regularidade", "Dokumentus": "https://drive.google.com/open?id=1bOv0av2IapX1yWx9hgNIH-pQf0Cubq4d"}, {"id": "16-1", "Timestamp": "6/26/2025 14:14:04", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Domingos da Concei\u00e7\u00e3o Barreto", "Seksu": "Mane", "Idade": "13", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Tri\u00e1ngulu Ret\u00e1ngulu Hodi Prova Teorema Pit\u00e1gora", "Dokumentus": "https://drive.google.com/open?id=1ZG-m4_l9ds6eCCuBze3nFaVqkCFSPo6S"}, {"id": "16-2", "Timestamp": "6/26/2025 14:14:04", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "C\u00e9lcia da Costa Barros", "Seksu": "Feto", "Idade": "13", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Tri\u00e1ngulu Ret\u00e1ngulu Hodi Prova Teorema Pit\u00e1gora", "Dokumentus": "https://drive.google.com/open?id=1ZG-m4_l9ds6eCCuBze3nFaVqkCFSPo6S"}, {"id": "16-3", "Timestamp": "6/26/2025 14:14:04", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Jeovanio Manlai de J. Barreto", "Seksu": "Mane", "Idade": "13", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Tri\u00e1ngulu Ret\u00e1ngulu Hodi Prova Teorema Pit\u00e1gora", "Dokumentus": "https://drive.google.com/open?id=1ZG-m4_l9ds6eCCuBze3nFaVqkCFSPo6S"}, {"id": "17-1", "Timestamp": "6/26/2025 14:23:51", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Carina Barbosa da Silva", "Seksu": "Feto", "Idade": "14", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Tri\u00e1ngulu Paskal Hodi Aprende Konseitu Pot\u00e9nsiasaun", "Dokumentus": "https://drive.google.com/open?id=1FS-ZwO62vjdSx3vcqQwSqHd6u4joUeh-"}, {"id": "17-2", "Timestamp": "6/26/2025 14:23:51", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Fel\u00edcia Barreto Soares", "Seksu": "Feto", "Idade": "14", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Tri\u00e1ngulu Paskal Hodi Aprende Konseitu Pot\u00e9nsiasaun", "Dokumentus": "https://drive.google.com/open?id=1FS-ZwO62vjdSx3vcqQwSqHd6u4joUeh-"}, {"id": "17-3", "Timestamp": "6/26/2025 14:23:51", "Munisipiu": "Manufahi", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1, 2, 3 Mindelo, Turiscai, Manufahi", "Naran Kanorin": "Gernia da Silva Pereira", "Seksu": "Feto", "Idade": "14", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Tri\u00e1ngulu Paskal Hodi Aprende Konseitu Pot\u00e9nsiasaun", "Dokumentus": "https://drive.google.com/open?id=1FS-ZwO62vjdSx3vcqQwSqHd6u4joUeh-"}, {"id": "18-1", "Timestamp": "6/26/2025 16:09:51", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Julia M. P. S. Araujo", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Iha Balde Hodi Sukat Tani-Ba Vomume Sira", "Dokumentus": "https://drive.google.com/open?id=1woe3w-EVZJjX3HiLOKFPqNSoR-c5EEdt"}, {"id": "18-2", "Timestamp": "6/26/2025 16:09:51", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Davia Margarida Antonio Sequeira", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Iha Balde Hodi Sukat Tani-Ba Vomume Sira", "Dokumentus": "https://drive.google.com/open?id=1woe3w-EVZJjX3HiLOKFPqNSoR-c5EEdt"}, {"id": "18-3", "Timestamp": "6/26/2025 16:09:51", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Justino M. Ximenes", "Seksu": "Feto", "Idade": "16", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Uza Iha Balde Hodi Sukat Tani-Ba Vomume Sira", "Dokumentus": "https://drive.google.com/open?id=1woe3w-EVZJjX3HiLOKFPqNSoR-c5EEdt"}, {"id": "19-1", "Timestamp": "6/27/2025 22:21:29", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Brigido Martins dos Santos", "Seksu": "Mane", "Idade": "18", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Produsaun Alku hosi Maek", "Dokumentus": "https://drive.google.com/open?id=11wGF4HRRoVI5VRFq7cObv7goY7OT--po"}, {"id": "19-2", "Timestamp": "6/27/2025 22:21:29", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Constantino Gomes Fernandes", "Seksu": "Mane", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Produsaun Alku hosi Maek", "Dokumentus": "https://drive.google.com/open?id=11wGF4HRRoVI5VRFq7cObv7goY7OT--po"}, {"id": "19-3", "Timestamp": "6/27/2025 22:21:29", "Munisipiu": "Ermera", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana Gleno - Ermera", "Naran Kanorin": "Elizabet D. P. Soares", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Produsaun Alku hosi Maek", "Dokumentus": "https://drive.google.com/open?id=11wGF4HRRoVI5VRFq7cObv7goY7OT--po"}, {"id": "20-1", "Timestamp": "6/28/2025 10:15:43", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Naran Kanorin": "Gloriana da Cruz", "Seksu": "Feto", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Fazendo Mingau Com Farinha de Semente de Manga", "Dokumentus": ""}, {"id": "21-1", "Timestamp": "6/28/2025 10:24:40", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Naran Kanorin": "Melti Joana  Pires", "Seksu": "Feto", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Fazendo Farinha De Semente de Abacate", "Dokumentus": ""}, {"id": "22-1", "Timestamp": "6/28/2025 10:32:43", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Naran Kanorin": "Octaviana de Fatima Nono", "Seksu": "Feto", "Idade": "16", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Produ\u00e7\u00e3o De Biodiesel a Partir de \u00d3leo Residual", "Dokumentus": ""}, {"id": "23-1", "Timestamp": "6/28/2025 10:42:24", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Naran Kanorin": "Manuela Rosario Menezes", "Seksu": "Feto", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Fazendo Fertilizante em P\u00f3 a Partir de Espinhas de Peixe", "Dokumentus": ""}, {"id": "24-1", "Timestamp": "6/28/2025 10:52:41", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Naran Kanorin": "Faviana P. Martiyani Lima Rodrigues", "Seksu": "Feto", "Idade": "15", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Filtragem de \u00c1gua Turva em \u00c1gua Limpa Usando Um M\u00e9todo de V\u00e1rios Est\u00e1gios", "Dokumentus": ""}, {"id": "25-1", "Timestamp": "6/28/2025 11:00:19", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Naran Kanorin": "Lilita N. Sandra Sequeira", "Seksu": "Feto", "Idade": "16", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Fazendo Tigelas com Cascas de Ovos", "Dokumentus": ""}, {"id": "26-1", "Timestamp": "6/28/2025 11:14:15", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Naran Kanorin": "Daniela Ximenes", "Seksu": "Feto", "Idade": "15", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Reutilizar Usado Para Fazendo Sab\u00e3o", "Dokumentus": ""}, {"id": "27-1", "Timestamp": "6/28/2025 11:23:10", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Naran Kanorin": "Pureza G. F. da S. Fernandes", "Seksu": "Feto", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Fazendo Tigelas com Cascas de Cafe", "Dokumentus": ""}, {"id": "28-1", "Timestamp": "6/30/2025 14:59:06", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Naran Kanorin": "Maria Viany A. Almeida", "Seksu": "Feto", "Idade": "19", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Halo Enerjia Ae\u00f3lika", "Dokumentus": ""}, {"id": "28-2", "Timestamp": "6/30/2025 14:59:06", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Naran Kanorin": "Eus\u00e9bio Barreto Vicente", "Seksu": "Mane", "Idade": "19", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Halo Enerjia Ae\u00f3lika", "Dokumentus": ""}, {"id": "29-1", "Timestamp": "6/30/2025 15:02:36", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Naran Kanorin": "Maria Viany A. Almeida", "Seksu": "Feto", "Idade": "19", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Espektrosk\u00f3piu", "Dokumentus": ""}, {"id": "29-2", "Timestamp": "6/30/2025 15:02:36", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Naran Kanorin": "Eus\u00e9bio Barreto Vicente", "Seksu": "Mane", "Idade": "19", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Espektrosk\u00f3piu", "Dokumentus": ""}, {"id": "30-1", "Timestamp": "6/30/2025 15:05:40", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Naran Kanorin": "Maria Viany A. Almeida", "Seksu": "Feto", "Idade": "19", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Destila\u00e7\u00e3o Simoles", "Dokumentus": ""}, {"id": "30-2", "Timestamp": "6/30/2025 15:05:40", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Naran Kanorin": "Eus\u00e9bio Barreto Vicente", "Seksu": "Mane", "Idade": "19", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Destila\u00e7\u00e3o Simoles", "Dokumentus": ""}, {"id": "31-1", "Timestamp": "6/30/2025 15:18:13", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Naran Kanorin": "Gabriel Marcel J. L. da Concei\u00e7\u00e3o", "Seksu": "Mane", "Idade": "19", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Mina Fuuk Uza Kemiri", "Dokumentus": ""}, {"id": "31-2", "Timestamp": "6/30/2025 15:18:13", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Naran Kanorin": "Raquel F\u00e1tima Saldanha", "Seksu": "Feto", "Idade": "19", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Mina Fuuk Uza Kemiri", "Dokumentus": ""}, {"id": "32-1", "Timestamp": "6/30/2025 15:22:28", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Naran Kanorin": "Roberto Caires X. Costa", "Seksu": "Mane", "Idade": "19", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Sismografu", "Dokumentus": ""}, {"id": "32-2", "Timestamp": "6/30/2025 15:22:28", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Naran Kanorin": "Leopoldina A.dos Reis Santos", "Seksu": "Feto", "Idade": "19", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Sismografu", "Dokumentus": ""}, {"id": "32-3", "Timestamp": "6/30/2025 15:22:28", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "Paroquial S\u00e3o Pedro Comoro, Dili", "Naran Kanorin": "Nat\u00e1lia de Jesus meni", "Seksu": "Feto", "Idade": "19", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Sismografu", "Dokumentus": ""}, {"id": "33-1", "Timestamp": "6/30/2025 16:44:43", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "(UNTL) Fakuldade: Edukasaun Arte E Humanidade. Departamentu: Ensinu De Biolojia", "Naran Kanorin": "Sonia Jenifer dos Santos Amaral", "Seksu": "Feto", "Idade": "19", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Impaktu Anim\u00e1l Parasita (Inang) Ba Iha To\u2019os ne\u2019eb\u00e9 mak Lokaliza Iha Suku Bahu, Postu Administrativu de Baucau Villa, Munis\u00edpiu Baucau.", "Dokumentus": ""}, {"id": "33-2", "Timestamp": "6/30/2025 16:44:43", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "(UNTL) Fakuldade: Edukasaun Arte E Humanidade. Departamentu: Ensinu De Biolojia", "Naran Kanorin": "Agueda Barbosa", "Seksu": "Feto", "Idade": "25", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Impaktu Anim\u00e1l Parasita (Inang) Ba Iha To\u2019os ne\u2019eb\u00e9 mak Lokaliza Iha Suku Bahu, Postu Administrativu de Baucau Villa, Munis\u00edpiu Baucau.", "Dokumentus": ""}, {"id": "33-3", "Timestamp": "6/30/2025 16:44:43", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "(UNTL) Fakuldade: Edukasaun Arte E Humanidade. Departamentu: Ensinu De Biolojia", "Naran Kanorin": "Estefania de Jesus Maia", "Seksu": "Feto", "Idade": "21", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Impaktu Anim\u00e1l Parasita (Inang) Ba Iha To\u2019os ne\u2019eb\u00e9 mak Lokaliza Iha Suku Bahu, Postu Administrativu de Baucau Villa, Munis\u00edpiu Baucau.", "Dokumentus": ""}, {"id": "34-1", "Timestamp": "6/30/2025 21:40:07", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "(UNTL) Fakuldade: Edukasaun Arte E Humanidade. Departamentu: Ensinu De Biolojia", "Naran Kanorin": "Elezita Xavier", "Seksu": "Feto", "Idade": "25", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Estudu Kona-ba Benef\u00edsiu Fitun Tasi (Asteroidea) ba Ekosistema Tasi Nian ne\u2019eb\u00e9 mak Lokaliza Iha Hera.", "Dokumentus": ""}, {"id": "34-2", "Timestamp": "6/30/2025 21:40:07", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "(UNTL) Fakuldade: Edukasaun Arte E Humanidade. Departamentu: Ensinu De Biolojia", "Naran Kanorin": "Nadilia Joela Cipriana Ati Santos", "Seksu": "Feto", "Idade": "19", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Estudu Kona-ba Benef\u00edsiu Fitun Tasi (Asteroidea) ba Ekosistema Tasi Nian ne\u2019eb\u00e9 mak Lokaliza Iha Hera.", "Dokumentus": ""}, {"id": "34-3", "Timestamp": "6/30/2025 21:40:07", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "(UNTL) Fakuldade: Edukasaun Arte E Humanidade. Departamentu: Ensinu De Biolojia", "Naran Kanorin": "Luciana Soares", "Seksu": "Feto", "Idade": "26", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Estudu Kona-ba Benef\u00edsiu Fitun Tasi (Asteroidea) ba Ekosistema Tasi Nian ne\u2019eb\u00e9 mak Lokaliza Iha Hera.", "Dokumentus": ""}, {"id": "35-1", "Timestamp": "7/1/2025 9:53:05", "Munisipiu": "Baucau", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP 01 Baucau", "Naran Kanorin": "Marcelina Guterres Henriques", "Seksu": "Feto", "Idade": "18", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Progress\u00e3o Aritm\u00e1tica & Geometrica", "Dokumentus": ""}, {"id": "35-2", "Timestamp": "7/1/2025 9:53:05", "Munisipiu": "Baucau", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP 01 Baucau", "Naran Kanorin": "Teon\u00e9cio Zaqueu Ant\u00f3nio da Costa Soares", "Seksu": "Mane", "Idade": "18", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Progress\u00e3o Aritm\u00e1tica & Geometrica", "Dokumentus": ""}, {"id": "35-3", "Timestamp": "7/1/2025 9:53:05", "Munisipiu": "Baucau", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP 01 Baucau", "Naran Kanorin": "Tomasia da Silva", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Progress\u00e3o Aritm\u00e1tica & Geometrica", "Dokumentus": ""}, {"id": "36-1", "Timestamp": "7/1/2025 10:34:27", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Feveria de Almeida Fernandes", "Seksu": "Feto", "Idade": "14", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Purifikasaun Bee Uza Enerjia Sol\u00e1r", "Dokumentus": ""}, {"id": "37-1", "Timestamp": "7/1/2025 10:39:18", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Keisia Barreto da Costa", "Seksu": "Feto", "Idade": "15", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Lapis Sai Fiu El\u00e9trika", "Dokumentus": ""}, {"id": "38-1", "Timestamp": "7/1/2025 10:44:08", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Octogardo Quehi H. dos Santos Freitas", "Seksu": "Mane", "Idade": "13", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Alarma Udan", "Dokumentus": ""}, {"id": "39-1", "Timestamp": "7/1/2025 10:48:35", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Lidia Maria Fatima da Silva", "Seksu": "Feto", "Idade": "15", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "M\u00e1kina Suar Hamate Susuk", "Dokumentus": ""}, {"id": "40-1", "Timestamp": "7/1/2025 10:51:49", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Edigar da Cruz Soares", "Seksu": "Mane", "Idade": "15", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Dispensar Simples", "Dokumentus": ""}, {"id": "41-1", "Timestamp": "7/1/2025 10:57:19", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Luzinha de Jesus Afonso Serra", "Seksu": "Feto", "Idade": "15", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Aimoruk Hamate Ular Modo", "Dokumentus": ""}, {"id": "42-1", "Timestamp": "7/1/2025 11:00:05", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Emilia Gomes da Silva", "Seksu": "Feto", "Idade": "15", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Modelu Servisu Irrigasaun Simples", "Dokumentus": ""}, {"id": "43-1", "Timestamp": "7/1/2025 11:06:58", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Leonilda Soares Noronha", "Seksu": "Feto", "Idade": "14", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Frasaun Rel\u00f3jiu", "Dokumentus": ""}, {"id": "44-1", "Timestamp": "7/1/2025 11:09:47", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Luzinha de Jesus Afonso Serra", "Seksu": "Feto", "Idade": "15", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Markad\u00f3r Tradision\u00e1l", "Dokumentus": ""}, {"id": "45-1", "Timestamp": "7/1/2025 11:13:51", "Munisipiu": "Baucau", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP 01 Baucau", "Naran Kanorin": "Denilo Alvaro Rodrigues Clai Ribeiro", "Seksu": "Mane", "Idade": "17", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Logaritmu (Sura Logaritmu Uza Aqua-Matan)", "Dokumentus": ""}, {"id": "45-2", "Timestamp": "7/1/2025 11:13:51", "Munisipiu": "Baucau", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP 01 Baucau", "Naran Kanorin": "Juventino Bou-Lesa Jeronimo Sousa", "Seksu": "Mane", "Idade": "18", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Logaritmu (Sura Logaritmu Uza Aqua-Matan)", "Dokumentus": ""}, {"id": "45-3", "Timestamp": "7/1/2025 11:13:51", "Munisipiu": "Baucau", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP 01 Baucau", "Naran Kanorin": "Filipa Alves Cabral", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Logaritmu (Sura Logaritmu Uza Aqua-Matan)", "Dokumentus": ""}, {"id": "46-1", "Timestamp": "7/1/2025 11:14:52", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Emiliana Mascarinhas Macedo", "Seksu": "Feto", "Idade": "14", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Multiplikasaun Simples hosi Kaixa (Doos)", "Dokumentus": ""}, {"id": "47-1", "Timestamp": "7/1/2025 11:18:16", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Zejunha Musky de Jesus Gon\u00e7alves", "Seksu": "Feto", "Idade": "14", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Bola Gigante De Vento", "Dokumentus": ""}, {"id": "48-1", "Timestamp": "7/1/2025 17:33:04", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG Nicolau Lobato, Dili", "Naran Kanorin": "Geovanio Imanuel Baptista pinto", "Seksu": "Mane", "Idade": "15", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Produsaun Ai-Moruk Asam Urat", "Dokumentus": ""}, {"id": "49-1", "Timestamp": "7/2/2025 6:27:09", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Naran Kanorin": "Estanislau Jose da Silva", "Seksu": "Mane", "Idade": "19", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Impaktu hosi Kolester\u00f3l ba Art\u00e9ria Iha Sistema Kardiovaskul\u00e1r (Ateroskleroze)", "Dokumentus": "https://drive.google.com/open?id=1OZGHQQ6uiRlZw_x5ykqMwQQubJfzZuwT"}, {"id": "49-2", "Timestamp": "7/2/2025 6:27:09", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Naran Kanorin": "Idaya Marlina Pinto", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Impaktu hosi Kolester\u00f3l ba Art\u00e9ria Iha Sistema Kardiovaskul\u00e1r (Ateroskleroze)", "Dokumentus": "https://drive.google.com/open?id=1OZGHQQ6uiRlZw_x5ykqMwQQubJfzZuwT"}, {"id": "49-3", "Timestamp": "7/2/2025 6:27:09", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 12 de Novembro Becora, Dili", "Naran Kanorin": "Kenno Fathir Febberer Gago Sousa", "Seksu": "Mane", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Impaktu hosi Kolester\u00f3l ba Art\u00e9ria Iha Sistema Kardiovaskul\u00e1r (Ateroskleroze)", "Dokumentus": "https://drive.google.com/open?id=1OZGHQQ6uiRlZw_x5ykqMwQQubJfzZuwT"}, {"id": "50-1", "Timestamp": "7/3/2025 13:47:30", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 3 Ciclo Fatumeta, Dili", "Naran Kanorin": "Ligia de Jesus Moniz da Silva", "Seksu": "Feto", "Idade": "12", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Jerad\u00f3r El\u00e9trika DC", "Dokumentus": ""}, {"id": "51-3", "Timestamp": "7/3/2025 15:14:15", "Munisipiu": "Aileu", "Nivel Eskola": "Ensinu B\u00e1ziku", "Naran Eskola": "EBC 1,2, 3 Dom Baumeta, Aileu", "Naran Kanorin": "Jo\u00e3o Mouzinho", "Seksu": "Mane", "Idade": "42", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "1.Jestaun Lixu Pl\u00e1stiku: Solusaun Inovativu sira liuhosi Prosesu halo tijolu ba Protesaun Ambient\u00e1l Tasi nian.", "Dokumentus": ""}, {"id": "54-1", "Timestamp": "7/4/2025 16:38:55", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 10 de Dezembro, Dili", "Naran Kanorin": "Frederico Hala Bosco", "Seksu": "Mane", "Idade": "15", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Produsaun Ai-moruk Asma", "Dokumentus": ""}, {"id": "55-1", "Timestamp": "7/4/2025 16:43:43", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 10 de Dezembro, Dili", "Naran Kanorin": "Frederico Hala Bosco", "Seksu": "Mane", "Idade": "15", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Produsaun Tongsis Uza Kesak Aqua Gelas nian", "Dokumentus": ""}, {"id": "56-1", "Timestamp": "7/4/2025 16:58:43", "Munisipiu": "Dili", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG 10 de Dezembro, Dili", "Naran Kanorin": "Frederico Hala Bosco", "Seksu": "Mane", "Idade": "15", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Produsaun Ai-moruk Mear", "Dokumentus": ""}, {"id": "57-1", "Timestamp": "7/5/2025 12:10:09", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Nagio Valentim pereira de Jesus", "Seksu": "Mane", "Idade": "18", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Prod\u00fas Paving Block hosi Lixu Pl\u00e1stiku", "Dokumentus": ""}, {"id": "57-2", "Timestamp": "7/5/2025 12:10:09", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Sim\u00e3o dos Santos Alves Freitas", "Seksu": "Mane", "Idade": "16", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Prod\u00fas Paving Block hosi Lixu Pl\u00e1stiku", "Dokumentus": ""}, {"id": "57-3", "Timestamp": "7/5/2025 12:10:09", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Jecia de Jesus do Ros\u00e1rio", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Prod\u00fas Paving Block hosi Lixu Pl\u00e1stiku", "Dokumentus": ""}, {"id": "58-1", "Timestamp": "7/5/2025 12:21:14", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Gabriel Dominicos Gon\u00e7alves Pereira", "Seksu": "Mane", "Idade": "18", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Import\u00e1nsia hosi Ai-parapa", "Dokumentus": ""}, {"id": "58-2", "Timestamp": "7/5/2025 12:21:14", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Ana Denia dos Santos Ribeiro", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Import\u00e1nsia hosi Ai-parapa", "Dokumentus": ""}, {"id": "58-3", "Timestamp": "7/5/2025 12:21:14", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Julito Maria Gon\u00e7alves", "Seksu": "Mane", "Idade": "20", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Import\u00e1nsia hosi Ai-parapa", "Dokumentus": ""}, {"id": "59-1", "Timestamp": "7/5/2025 12:29:53", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Filomena Ristyana Nope Freitas", "Seksu": "Feto", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Sabaun hosi Ahu-mama no Soda Kue", "Dokumentus": ""}, {"id": "59-2", "Timestamp": "7/5/2025 12:29:53", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Arnia Zilda Gon\u00e7alves", "Seksu": "Feto", "Idade": "16", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Sabaun hosi Ahu-mama no Soda Kue", "Dokumentus": ""}, {"id": "59-3", "Timestamp": "7/5/2025 12:29:53", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Melcio dos Santos Exposto", "Seksu": "Mane", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Sabaun hosi Ahu-mama no Soda Kue", "Dokumentus": ""}, {"id": "60-1", "Timestamp": "7/5/2025 12:41:28", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Gerson Faria dos Santos", "Seksu": "Mane", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Fertilizante hosi Masin Fatuk", "Dokumentus": ""}, {"id": "60-2", "Timestamp": "7/5/2025 12:41:28", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Gabriela Sofia Soares", "Seksu": "Feto", "Idade": "16", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Fertilizante hosi Masin Fatuk", "Dokumentus": ""}, {"id": "60-3", "Timestamp": "7/5/2025 12:41:28", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "J\u00falio Urbano Nunes Sarmento", "Seksu": "Mane", "Idade": "19", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Fertilizante hosi Masin Fatuk", "Dokumentus": ""}, {"id": "61-1", "Timestamp": "7/5/2025 12:54:59", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Zelazio Mario Setrin dos Santos", "Seksu": "Mane", "Idade": "17", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "L\u00edkidu Non-newtonian", "Dokumentus": ""}, {"id": "61-2", "Timestamp": "7/5/2025 12:54:59", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "B\u00e1rbara Clarissa dos Santos Gon\u00e7alves", "Seksu": "Feto", "Idade": "17", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "L\u00edkidu Non-newtonian", "Dokumentus": ""}, {"id": "61-3", "Timestamp": "7/5/2025 12:54:59", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Ilda F\u00e1tima dos Santos", "Seksu": "Feto", "Idade": "15", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "L\u00edkidu Non-newtonian", "Dokumentus": ""}, {"id": "62-1", "Timestamp": "7/5/2025 13:40:26", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Ged\u00e1nia Gon\u00e7alves da Cruz Nunes", "Seksu": "Feto", "Idade": "18", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Tinta hosi Ai-daak", "Dokumentus": ""}, {"id": "62-2", "Timestamp": "7/5/2025 13:40:26", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Jos\u00e9 dos Santos Carvalho", "Seksu": "Mane", "Idade": "19", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Tinta hosi Ai-daak", "Dokumentus": ""}, {"id": "62-3", "Timestamp": "7/5/2025 13:40:26", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Analia F\u00e1tima da Concei\u00e7\u00e3o", "Seksu": "Feto", "Idade": "15", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Tinta hosi Ai-daak", "Dokumentus": ""}, {"id": "63-1", "Timestamp": "7/5/2025 13:53:18", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Nicson da Silva Serr\u00e3o Ribeiro", "Seksu": "Mane", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Bateria hosi Tasi-been", "Dokumentus": ""}, {"id": "63-2", "Timestamp": "7/5/2025 13:53:18", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Charles Lopes Gon\u00e7alves", "Seksu": "Mane", "Idade": "18", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Bateria hosi Tasi-been", "Dokumentus": ""}, {"id": "63-3", "Timestamp": "7/5/2025 13:53:18", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Ivanelcia Alves Pereira Menezes", "Seksu": "Feto", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Bateria hosi Tasi-been", "Dokumentus": ""}, {"id": "64-1", "Timestamp": "7/5/2025 14:03:50", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Delvia da Silva dos Santos", "Seksu": "Feto", "Idade": "19", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Prod\u00fas Soda Alkohol hosi Ai-Nanas Kulit", "Dokumentus": ""}, {"id": "64-2", "Timestamp": "7/5/2025 14:03:50", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Maria F\u00e9lia dos Santos", "Seksu": "Feto", "Idade": "15", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Prod\u00fas Soda Alkohol hosi Ai-Nanas Kulit", "Dokumentus": ""}, {"id": "64-3", "Timestamp": "7/5/2025 14:03:50", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Rigo Alves da Silva", "Seksu": "Mane", "Idade": "15", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Prod\u00fas Soda Alkohol hosi Ai-Nanas Kulit", "Dokumentus": ""}, {"id": "65-1", "Timestamp": "7/5/2025 14:16:05", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Joana Exposto da Cruz Silva", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "prod\u00fas mina fuuk hosi duut morin", "Dokumentus": ""}, {"id": "65-2", "Timestamp": "7/5/2025 14:16:05", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Christina Jai Santos Meri", "Seksu": "Feto", "Idade": "18", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "prod\u00fas mina fuuk hosi duut morin", "Dokumentus": ""}, {"id": "65-3", "Timestamp": "7/5/2025 14:16:05", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Jonidio Jacinto Pereira Galucho", "Seksu": "Mane", "Idade": "16", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "prod\u00fas mina fuuk hosi duut morin", "Dokumentus": ""}, {"id": "66-1", "Timestamp": "7/5/2025 14:20:13", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Cjristina Jai Santos Meri", "Seksu": "Feto", "Idade": "18", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Lilin Aromaterapi", "Dokumentus": ""}, {"id": "66-2", "Timestamp": "7/5/2025 14:20:13", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Tamicia Lopes Galucho", "Seksu": "Feto", "Idade": "N/A", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Lilin Aromaterapi", "Dokumentus": ""}, {"id": "66-3", "Timestamp": "7/5/2025 14:20:13", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Julito Maria Gon\u00e7alves", "Seksu": "Mane", "Idade": "19", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Lilin Aromaterapi", "Dokumentus": ""}, {"id": "67-1", "Timestamp": "7/5/2025 14:28:09", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Gabriel Dominicos Gon\u00e7alves Pereira", "Seksu": "Mane", "Idade": "18", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Halo Kantadeiru Hidroponik", "Dokumentus": ""}, {"id": "67-2", "Timestamp": "7/5/2025 14:28:09", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Ilda de F\u00e1tima dos Santos", "Seksu": "Feto", "Idade": "15", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Halo Kantadeiru Hidroponik", "Dokumentus": ""}, {"id": "67-3", "Timestamp": "7/5/2025 14:28:09", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Julito Maria Gon\u00e7alves", "Seksu": "Mane", "Idade": "20", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Halo Kantadeiru Hidroponik", "Dokumentus": ""}, {"id": "68-1", "Timestamp": "7/5/2025 14:37:45", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Germ\u00e2nia da Silva Ribeiro", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Adubu Org\u00e1niku hosi Budu-tasi", "Dokumentus": ""}, {"id": "68-2", "Timestamp": "7/5/2025 14:37:45", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "N\u00e9lsia Alves Correia", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Adubu Org\u00e1niku hosi Budu-tasi", "Dokumentus": ""}, {"id": "68-3", "Timestamp": "7/5/2025 14:37:45", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Leopoldino Martins pereira", "Seksu": "Mane", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Adubu Org\u00e1niku hosi Budu-tasi", "Dokumentus": ""}, {"id": "69-1", "Timestamp": "7/5/2025 14:46:46", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Jo\u00e3o da Concei\u00e7\u00e3o Santos", "Seksu": "Mane", "Idade": "18", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Kombust\u00edvel hosi Sereja Fuan", "Dokumentus": ""}, {"id": "69-2", "Timestamp": "7/5/2025 14:46:46", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Jecia de Jesus do Ros\u00e1rio", "Seksu": "Feto", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Kombust\u00edvel hosi Sereja Fuan", "Dokumentus": ""}, {"id": "69-3", "Timestamp": "7/5/2025 14:46:46", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Rigo Alves da Silva", "Seksu": "Mane", "Idade": "15", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Kombust\u00edvel hosi Sereja Fuan", "Dokumentus": ""}, {"id": "70-1", "Timestamp": "7/5/2025 14:57:13", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Gabriel Dominicos Gon\u00e7alves Pereira", "Seksu": "Mane", "Idade": "18", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Fugain Solar", "Dokumentus": ""}, {"id": "70-2", "Timestamp": "7/5/2025 14:57:13", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Ana Denia dos Santos Ribeiro", "Seksu": "Feto", "Idade": "17", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Fugain Solar", "Dokumentus": ""}, {"id": "70-3", "Timestamp": "7/5/2025 14:57:13", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Charles Lopes Gon\u00e7alves", "Seksu": "Mane", "Idade": "18", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Fugain Solar", "Dokumentus": ""}, {"id": "71-1", "Timestamp": "7/6/2025 22:01:56", "Munisipiu": "Laut\u00e9m", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana, Lospalos", "Naran Kanorin": "Florentina Quint\u00e3o Da Costa Dias", "Seksu": "Feto", "Idade": "20", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Jikrosk\u00f3piu Autom\u00e1tiku", "Dokumentus": ""}, {"id": "72-1", "Timestamp": "7/6/2025 22:32:33", "Munisipiu": "Laut\u00e9m", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana, Lospalos", "Naran Kanorin": "Giovanni Coreia T. Usfinit", "Seksu": "Mane", "Idade": "16", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Indu\u00e7\u00e3o Electromagn\u00e9tica", "Dokumentus": ""}, {"id": "73-1", "Timestamp": "7/6/2025 22:41:22", "Munisipiu": "Laut\u00e9m", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESG. Nino Konis Santana, Lospalos", "Naran Kanorin": "Jonato Rato Da Silva Amaral", "Seksu": "Mane", "Idade": "15", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Logaritma", "Dokumentus": ""}, {"id": "74-1", "Timestamp": "7/7/2025 12:09:10", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNDIL", "Naran Kanorin": "Marco Jeclinton Padev Seixas Tout", "Seksu": "Mane", "Idade": "N/A", "Dixiplina": "Publik speaking", "Titulu/T\u00f3piku": "", "Dokumentus": ""}, {"id": "74-2", "Timestamp": "7/7/2025 12:09:10", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNDIL", "Naran Kanorin": "Marco Jeclinton Padev Seixas Tout", "Seksu": "Mane", "Idade": "21", "Dixiplina": "Publik speaking", "Titulu/T\u00f3piku": "", "Dokumentus": ""}, {"id": "75-1", "Timestamp": "7/7/2025 12:55:26", "Munisipiu": "Manatuto", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Alberto De Sousa Soares", "Seksu": "Mane", "Idade": "24", "Dixiplina": "Enje\u00f1aria Siv\u00edl", "Titulu/T\u00f3piku": "", "Dokumentus": ""}, {"id": "75-2", "Timestamp": "7/7/2025 12:55:26", "Munisipiu": "Manatuto", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Alberto De Sousa Soares", "Seksu": "Mane", "Idade": "24", "Dixiplina": "Enje\u00f1aria Siv\u00edl", "Titulu/T\u00f3piku": "", "Dokumentus": ""}, {"id": "76-1", "Timestamp": "7/7/2025 16:57:43", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Tarc\u00edsio Valente de Jesus Gon\u00e7alves", "Seksu": "Mane", "Idade": "18", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Vernis hosi Gabus", "Dokumentus": ""}, {"id": "76-2", "Timestamp": "7/7/2025 16:57:43", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Januarita Clara Manuela Nope Freitas", "Seksu": "Feto", "Idade": "14", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Vernis hosi Gabus", "Dokumentus": ""}, {"id": "76-3", "Timestamp": "7/7/2025 16:57:43", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Milton Correia dos Santos", "Seksu": "Mane", "Idade": "16", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Vernis hosi Gabus", "Dokumentus": ""}, {"id": "77-1", "Timestamp": "7/7/2025 17:26:57", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Nelvio Ramos Soares", "Seksu": "Mane", "Idade": "17", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Impaktu halo to'os Movel", "Dokumentus": ""}, {"id": "77-2", "Timestamp": "7/7/2025 17:26:57", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Leopoldina Dos Santos Nunes", "Seksu": "Feto", "Idade": "14", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Impaktu halo to'os Movel", "Dokumentus": ""}, {"id": "77-3", "Timestamp": "7/7/2025 17:26:57", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Ren\u00edgio Nunes R\u00eago", "Seksu": "Mane", "Idade": "16", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Impaktu halo to'os Movel", "Dokumentus": ""}, {"id": "78-1", "Timestamp": "7/7/2025 17:46:40", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Joana Exposto da Cruz Silva", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Alarme Inundasaun", "Dokumentus": ""}, {"id": "78-2", "Timestamp": "7/7/2025 17:46:40", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Jonidio Jacinto Pereira Galocho", "Seksu": "Mane", "Idade": "16", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Alarme Inundasaun", "Dokumentus": ""}, {"id": "78-3", "Timestamp": "7/7/2025 17:46:40", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Robelina Dos Santos", "Seksu": "Feto", "Idade": "17", "Dixiplina": "Jeolojia", "Titulu/T\u00f3piku": "Alarme Inundasaun", "Dokumentus": ""}, {"id": "79-1", "Timestamp": "7/7/2025 18:07:30", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNPAZ", "Naran Kanorin": "Timorina Teni Maia", "Seksu": "Feto", "Idade": "24", "Dixiplina": "Agr\u00edkola", "Titulu/T\u00f3piku": "Halo Adubu", "Dokumentus": ""}, {"id": "80-1", "Timestamp": "7/8/2025 9:09:26", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Eudalia Maia", "Seksu": "Feto", "Idade": "23", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Matem\u00e1tika", "Dokumentus": ""}, {"id": "81-1", "Timestamp": "7/8/2025 15:36:33", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Bram\u00e3o De Cardoso Lajes", "Seksu": "Mane", "Idade": "18", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Prod\u00fas Speaker", "Dokumentus": ""}, {"id": "81-2", "Timestamp": "7/8/2025 15:36:33", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Marciana Pereira Dos Santos", "Seksu": "Feto", "Idade": "17", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Prod\u00fas Speaker", "Dokumentus": ""}, {"id": "81-3", "Timestamp": "7/8/2025 15:36:33", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Tarc\u00edsio Valente de Jesus Gon\u00e7alves", "Seksu": "Mane", "Idade": "18", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Prod\u00fas Speaker", "Dokumentus": ""}, {"id": "82-1", "Timestamp": "7/8/2025 22:05:53", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "", "Naran Kanorin": "Agostinho Natalino de Jesus Soares", "Seksu": "Mane", "Idade": "28", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "", "Dokumentus": ""}, {"id": "82-2", "Timestamp": "7/8/2025 22:05:53", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "", "Naran Kanorin": "Agostinho Natalino de Jesus Soares", "Seksu": "Mane", "Idade": "28", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "", "Dokumentus": ""}, {"id": "82-3", "Timestamp": "7/8/2025 22:05:53", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "", "Naran Kanorin": "Agostinho Natalino de Jesus Soares", "Seksu": "Mane", "Idade": "N/A", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "", "Dokumentus": ""}, {"id": "83-1", "Timestamp": "7/9/2025 16:19:09", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Armindo da Costa", "Seksu": "Mane", "Idade": "29", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Utiliza Metodo Polya Para Resolu\u00e7\u00e3o Problema", "Dokumentus": "https://drive.google.com/open?id=19SP9x72xHJv4u8mrkftAdTq7aq_sEMCC"}, {"id": "83-2", "Timestamp": "7/9/2025 16:19:09", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Armindo da Costa", "Seksu": "Mane", "Idade": "29", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Utiliza Metodo Polya Para Resolu\u00e7\u00e3o Problema", "Dokumentus": "https://drive.google.com/open?id=19SP9x72xHJv4u8mrkftAdTq7aq_sEMCC"}, {"id": "83-3", "Timestamp": "7/9/2025 16:19:09", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Armindo da Costa", "Seksu": "Mane", "Idade": "29", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Utiliza Metodo Polya Para Resolu\u00e7\u00e3o Problema", "Dokumentus": "https://drive.google.com/open?id=19SP9x72xHJv4u8mrkftAdTq7aq_sEMCC"}, {"id": "84-1", "Timestamp": "7/10/2025 12:27:52", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Ana Maria Sejuinha", "Seksu": "Feto", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Briket Hudi Ahi-klak", "Dokumentus": ""}, {"id": "84-2", "Timestamp": "7/10/2025 12:27:52", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Mu'afa Bin Ibrahim", "Seksu": "Mane", "Idade": "15", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Briket Hudi Ahi-klak", "Dokumentus": ""}, {"id": "84-3", "Timestamp": "7/10/2025 12:27:52", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Flor\u00eancia Ver\u00f3nica Santos", "Seksu": "Feto", "Idade": "15", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Briket Hudi Ahi-klak", "Dokumentus": ""}, {"id": "85-1", "Timestamp": "7/10/2025 12:31:27", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Margarida Correia Martins", "Seksu": "Feto", "Idade": "19", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Mina Aroma Terapi", "Dokumentus": ""}, {"id": "85-2", "Timestamp": "7/10/2025 12:31:27", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Ana Maria Sejuinha", "Seksu": "Feto", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Mina Aroma Terapi", "Dokumentus": ""}, {"id": "85-3", "Timestamp": "7/10/2025 12:31:27", "Munisipiu": "Liqui\u00e7a", "Nivel Eskola": "Ensinu Sekund\u00e1riu", "Naran Eskola": "ESGP Nu. 1 de Liqui\u00e7a", "Naran Kanorin": "Nicson da Silva Serr\u00e3o Ribeiro", "Seksu": "Mane", "Idade": "17", "Dixiplina": "K\u00edmika", "Titulu/T\u00f3piku": "Prod\u00fas Mina Aroma Terapi", "Dokumentus": ""}, {"id": "86-1", "Timestamp": "7/10/2025 13:58:03", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "(UNTL) Fakuldade: Edukasaun Arte E Humanidade. Departamentu: Ensinu De Biolojia", "Naran Kanorin": "Maria Madalena J. C. Pinto", "Seksu": "Feto", "Idade": "22", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Prosesu Rekolla Mechi (Ular Tasi) Iha Suku Mehara, Posto Administrativu Tutuala, Munis\u00edpiu Lautem", "Dokumentus": ""}, {"id": "86-2", "Timestamp": "7/10/2025 13:58:03", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "(UNTL) Fakuldade: Edukasaun Arte E Humanidade. Departamentu: Ensinu De Biolojia", "Naran Kanorin": "Helga do Carmo", "Seksu": "Feto", "Idade": "24", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Prosesu Rekolla Mechi (Ular Tasi) Iha Suku Mehara, Posto Administrativu Tutuala, Munis\u00edpiu Lautem", "Dokumentus": ""}, {"id": "86-3", "Timestamp": "7/10/2025 13:58:03", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "(UNTL) Fakuldade: Edukasaun Arte E Humanidade. Departamentu: Ensinu De Biolojia", "Naran Kanorin": "Isaura  Maria da Costa", "Seksu": "Feto", "Idade": "25", "Dixiplina": "Biolojia", "Titulu/T\u00f3piku": "Prosesu Rekolla Mechi (Ular Tasi) Iha Suku Mehara, Posto Administrativu Tutuala, Munis\u00edpiu Lautem", "Dokumentus": ""}, {"id": "88-1", "Timestamp": "7/15/2025 14:18:42", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Gil Bosco de Sousa", "Seksu": "Mane", "Idade": "23", "Dixiplina": "Si\u00e9nsia Komputad\u00f3r", "Titulu/T\u00f3piku": "Digital Image processing: Sistema Sukat Medida Objetu Autom\u00e1tiku Utilija Prosesamentu Imajen", "Dokumentus": ""}, {"id": "88-2", "Timestamp": "7/15/2025 14:18:42", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Hernanio Esdra Cruz Tilman", "Seksu": "Mane", "Idade": "23", "Dixiplina": "Si\u00e9nsia Komputad\u00f3r", "Titulu/T\u00f3piku": "Digital Image processing: Sistema Sukat Medida Objetu Autom\u00e1tiku Utilija Prosesamentu Imajen", "Dokumentus": ""}, {"id": "89-1", "Timestamp": "7/16/2025 17:06:56", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Gil Bosco de Sousa", "Seksu": "Mane", "Idade": "23", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Mikrokontroler: Deze\u00f1a Sistema Kontrola Lampu AC (Alternative Current) Bazeia ba IOT", "Dokumentus": ""}, {"id": "89-2", "Timestamp": "7/16/2025 17:06:56", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Hernanio Esdra Cruz Tilman", "Seksu": "Mane", "Idade": "23", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Mikrokontroler: Deze\u00f1a Sistema Kontrola Lampu AC (Alternative Current) Bazeia ba IOT", "Dokumentus": ""}, {"id": "89-3", "Timestamp": "7/16/2025 17:06:56", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Abilio Moniz", "Seksu": "Mane", "Idade": "27", "Dixiplina": "F\u00edzika", "Titulu/T\u00f3piku": "Mikrokontroler: Deze\u00f1a Sistema Kontrola Lampu AC (Alternative Current) Bazeia ba IOT", "Dokumentus": ""}, {"id": "90-1", "Timestamp": "7/16/2025 19:36:04", "Munisipiu": "Dili", "Nivel Eskola": "Universit\u00e1riu", "Naran Eskola": "UNTL", "Naran Kanorin": "Sofia Joela Da Silva Soares", "Seksu": "Feto", "Idade": "22", "Dixiplina": "Matem\u00e1tika", "Titulu/T\u00f3piku": "Deskobre sekuensia Numero iha biti", "Dokumentus": ""}], "municipalityPieChartData": {"labels": ["Dili", "Liqui\u00e7a", "Ermera", "Aileu", "Manufahi", "Laut\u00e9m", "Baucau", "Manatuto"], "data": [43, 20, 10, 6, 6, 3, 2, 1]}};
+
+            let currentPage = 1;
+            let rowsPerPage = 10;
+            let currentSearchTerm = '';
+            let currentNivelEskolaFilter = 'All';
+            let currentMunisipiuFilter = 'All'; // New: Variable for Munisipiu filter
+
+            // Utility to generate consistent colors
+            function generateColors(numColors) {
+                const colors = [
+                    'rgba(75, 192, 192, 0.6)', 'rgba(153, 102, 255, 0.6)', 'rgba(255, 159, 64, 0.6)',
+                    'rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)', 'rgba(201, 203, 207, 0.6)',
+                    'rgba(255, 205, 86, 0.6)', 'rgba(100, 149, 237, 0.6)', 'rgba(255, 0, 255, 0.6)',
+                    'rgba(0, 255, 0, 0.6)', 'rgba(0, 0, 255, 0.6)', 'rgba(128, 0, 128, 0.6)'
+                ];
+                return Array.from({length: numColors}, (_, i) => colors[i % colors.length]);
+            }
+
+            // Function to create a generic Bar Chart
+            function createBarChart(canvasId, title, labels, data) {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Totál',
+                            data: data,
+                            backgroundColor: generateColors(labels.length),
+                            borderColor: generateColors(labels.length).map(color => color.replace('0.6', '1')),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: title,
+                                font: { size: 16, weight: 'bold' }
+                            },
+                            legend: {
+                                display: false
+                            },
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                formatter: (value) => value,
+                                color: '#333',
+                                font: { weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Function to create a generic Pie Chart
+            function createPieChart(canvasId, title, labels, data) {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Pursentu',
+                            data: data,
+                            backgroundColor: generateColors(labels.length),
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: title,
+                                font: { size: 16, weight: 'bold' }
+                            },
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: { size: 12 }
+                                }
+                            },
+                            datalabels: {
+                                formatter: (value, ctx) => {
+                                    let sum = 0;
+                                    let dataArr = ctx.chart.data.datasets[0].data;
+                                    dataArr.map(data => {
+                                        sum += data;
+                                    });
+                                    let percentage = (value * 100 / sum).toFixed(1) + '%';
+                                    return percentage;
+                                },
+                                color: '#fff',
+                                font: {
+                                    weight: 'bold',
+                                    size: 14
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function renderCharts() {
+                // Gender Chart (still Pie)
+                createPieChart(
+                    'genderChart',
+                    '',
+                    dashboardData.genderChartData.labels,
+                    dashboardData.genderChartData.data
+                );
+
+                // Age Chart (still Bar)
+                createBarChart(
+                    'ageChart',
+                    '',
+                    dashboardData.ageChartData.labels,
+                    dashboardData.ageChartData.data
+                );
+
+                // School Level Chart (CHANGED TO PIE CHART as requested)
+                createPieChart(
+                    'schoolLevelChart',
+                    '',
+                    dashboardData.schoolLevelChartData.labels,
+                    dashboardData.schoolLevelChartData.data
+                );
+
+                // Discipline Chart (still Bar)
+                createBarChart(
+                    'disciplineChart',
+                    '',
+                    dashboardData.disciplineChartData.labels,
+                    dashboardData.disciplineChartData.data
+                );
+
+                // Municipality Chart (CHANGED TO BAR CHART as requested)
+                createBarChart(
+                    'municipalityChart',
+                    '',
+                    dashboardData.municipalityPieChartData.labels,
+                    dashboardData.municipalityPieChartData.data
+                );
+            }
+
+            function renderSchoolMunicipalityTable() {
+                const tableBody = document.getElementById('schoolMunicipalityTableBody');
+                tableBody.innerHTML = ''; // Hamoos liña sira ne'ebé eziste
+
+                if (dashboardData.schoolMunicipalityTableData.length > 0) {
+                    dashboardData.schoolMunicipalityTableData.forEach(row => {
+                        tableBody.innerHTML += `
+                            <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">${row.Munisipiu}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">${row['Naran Eskola']}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">${row.Total}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="px-4 py-2 text-center text-gray-500">
+                                La-iha dadus eskola ne'ebé disponivel.
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+
+
+            function renderDetailedTable() {
+                const tableContainer = document.getElementById('detailed-table-container');
+                let filteredData = dashboardData.detailedTableData;
+
+                // Apply Nivel Eskola Filter
+                if (currentNivelEskolaFilter !== 'All') {
+                    filteredData = filteredData.filter(row => row['Nivel Eskola'] === currentNivelEskolaFilter);
+                }
+
+                // Apply Munisipiu Filter (NEW)
+                if (currentMunisipiuFilter !== 'All') {
+                    filteredData = filteredData.filter(row => row['Munisipiu'] === currentMunisipiuFilter);
+                }
+
+                // Apply Search Filter
+                if (currentSearchTerm) {
+                    const searchTermLower = currentSearchTerm.toLowerCase();
+                    filteredData = filteredData.filter(row =>
+                        Object.values(row).some(value =>
+                            String(value).toLowerCase().includes(searchTermLower)
+                        )
+                    );
+                }
+
+                // Pagination
+                const totalPages = rowsPerPage === 'All' ? 1 : Math.ceil(filteredData.length / rowsPerPage);
+                const startIndex = rowsPerPage === 'All' ? 0 : (currentPage - 1) * rowsPerPage;
+                const endIndex = rowsPerPage === 'All' ? filteredData.length : startIndex + parseInt(rowsPerPage);
+                const paginatedData = filteredData.slice(startIndex, endIndex);
+
+                let tableHtml = `
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                            <tr>
+                                <th scope="col">Timestamp</th>
+                                <th scope="col">Munisipiu</th>
+                                <th scope="col">Nivel Eskola</th>
+                                <th scope="col">Naran Eskola</th>
+                                <th scope="col">Naran Kanorin</th>
+                                <th scope="col">Seksu</th>
+                                <th scope="col">Idade</th>
+                                <th scope="col">Dixiplina</th>
+                                <th scope="col">Títulu/Tópiku</th>
+                                <th scope="col">Dokumentu</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-100">
+                `;
+
+                if (paginatedData.length > 0) {
+                    paginatedData.forEach(row => {
+                        tableHtml += `
+                            <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                <td>${row.Timestamp}</td>
+                                <td>${row.Munisipiu}</td>
+                                <td>${row['Nivel Eskola']}</td>
+                                <td>${row['Naran Eskola']}</td>
+                                <td>${row['Naran Kanorin']}</td>
+                                <td>${row.Seksu}</td>
+                                <td>${row.Idade}</td>
+                                <td>${row.Dixiplina}</td>
+                                <td>${row['Titulu/Tópiku']}</td>
+                                <td>${row.Dokumentus}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tableHtml += `
+                        <tr>
+                            <td colspan="10" class="px-6 py-4 text-center text-gray-500">
+                                La-iha dadus ne'ebé disponivel aliña ho filtrasaun atuál.
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                tableHtml += `
+                        </tbody>
+                    </table>
+                `;
+                tableContainer.innerHTML = tableHtml;
+
+                updatePaginationControls(totalPages, filteredData.length);
+            }
+
+            function updatePaginationControls(totalPages, totalFilteredRows) {
+                document.getElementById('currentPageSpan').textContent = currentPage;
+                document.getElementById('totalPagesSpan').textContent = totalPages;
+
+                document.getElementById('prevPage').disabled = currentPage === 1;
+                document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0 || rowsPerPage === 'All';
+
+                // Ensure current page doesn't exceed total pages after filtering
+                if (currentPage > totalPages && totalPages > 0) {
+                    currentPage = totalPages;
+                    renderDetailedTable();
+                } else if (totalPages === 0) {
+                    currentPage = 0; // No pages if no data
+                    document.getElementById('currentPageSpan').textContent = 0;
+                }
+            }
+
+            function renderFilterOptions() {
+                const nivelEskolaFilterSelect = document.getElementById('nivelEskolaFilter');
+                nivelEskolaFilterSelect.innerHTML = ''; // Hamoos Opsaun sira ne'ebé eziste
+
+                dashboardData.allNivelEskolaOptions.forEach(option => {
+                    const optElement = document.createElement('option');
+                    optElement.value = option;
+                    optElement.textContent = option;
+                    nivelEskolaFilterSelect.appendChild(optElement);
+                });
+
+                // Set initial filter value and render table
+                nivelEskolaFilterSelect.value = 'All';
+                currentNivelEskolaFilter = 'All'; // Initialize filter state
+
+
+                const munisipiuFilterSelect = document.getElementById('munisipiuFilter'); // NEW: Get Munisipiu filter element
+                munisipiuFilterSelect.innerHTML = ''; // Clear existing options
+
+                dashboardData.allMunisipiuOptions.forEach(option => { // NEW: Populate Munisipiu options
+                    const optElement = document.createElement('option');
+                    optElement.value = option;
+                    optElement.textContent = option;
+                    munisipiuFilterSelect.appendChild(optElement);
+                });
+
+                munisipiuFilterSelect.value = 'All'; // NEW: Set initial Munisipiu filter
+                currentMunisipiuFilter = 'All'; // NEW: Initialize Munisipiu filter state
+
+                currentPage = 1; // Reset page on any filter change
+                renderDetailedTable(); // Render table with initial filters
+
+                // Add event listener for Nivel Eskola filter changes
+                nivelEskolaFilterSelect.addEventListener('change', (event) => {
+                    currentNivelEskolaFilter = event.target.value;
+                    currentPage = 1; // Reset page on filter change
+                    renderDetailedTable();
+                });
+
+                // Add event listener for Munisipiu filter changes (NEW)
+                munisipiuFilterSelect.addEventListener('change', (event) => {
+                    currentMunisipiuFilter = event.target.value;
+                    currentPage = 1; // Reset page on filter change
+                    renderDetailedTable();
+                });
+            }
+
+            // Initialize dashboard on page load
+            document.addEventListener('DOMContentLoaded', () => {
+                // Display total counts
+                document.getElementById('totalMunicipality').textContent = dashboardData.totalMunicipality;
+                document.getElementById('totalGender').textContent = dashboardData.totalGender;
+                document.getElementById('totalDiscipline').textContent = dashboardData.totalDiscipline;
+                document.getElementById('totalTopiku').textContent = dashboardData.totalTopiku;
+
+                renderCharts();
+                renderSchoolMunicipalityTable();
+                renderFilterOptions(); // This also triggers initial renderDetailedTable
+
+                // Event Listeners for Search and Pagination
+                const detailedTableSearch = document.getElementById('detailedTableSearch');
+                detailedTableSearch.addEventListener('input', (event) => {
+                    currentSearchTerm = event.target.value;
+                    currentPage = 1; // Reset to first page on search
+                    renderDetailedTable();
+                });
+
+                const rowsPerPageSelect = document.getElementById('rowsPerPage');
+                rowsPerPageSelect.addEventListener('change', (event) => {
+                    rowsPerPage = event.target.value === 'All' ? 'All' : parseInt(event.target.value);
+                    currentPage = 1; // Reset to first page when rows per page changes
+                    renderDetailedTable();
+                });
+
+                document.getElementById('prevPage').addEventListener('click', () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderDetailedTable();
+                    }
+                });
+
+                document.getElementById('nextPage').addEventListener('click', () => {
+                    const totalPages = rowsPerPage === 'All' ? 1 : Math.ceil(dashboardData.detailedTableData.length / rowsPerPage);
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        renderDetailedTable();
+                    }
+                });
+
+                // Initial render of detailed table with default settings
+                renderDetailedTable();
+            });
+        </script>
+    </body>
+    </html>
+    
