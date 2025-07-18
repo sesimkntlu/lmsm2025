@@ -284,7 +284,7 @@ def generate_html_dashboard(dashboard_data, background_image_url=None):
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Demographic Dashboard Report</title>
+        <title>LMSM 2025</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -373,7 +373,7 @@ def generate_html_dashboard(dashboard_data, background_image_url=None):
                 <p id="totalDiscipline" class="text-5xl font-extrabold text-purple-600"></p>
             </div>
             <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1 flex flex-col items-center justify-center">
-                <h2 class="text-2xl font-bold text-indigo-500 mb-3">Tópiku LMSM</h2> <p id="totalTopiku" class="text-5xl font-extrabold text-purple-600"></p>
+                <h2 class="text-2xl font-bold text-indigo-500 mb-3">📚 Tópiku LMSM</h2> <p id="totalTopiku" class="text-5xl font-extrabold text-purple-600"></p>
             </div>
         </section>
 
