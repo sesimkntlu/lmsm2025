@@ -35,16 +35,29 @@ try:
     response.raise_for_status() # This will raise an HTTPError for bad responses (4xx or 5xx)
     data = response.json().get('values', [])
 
-    if data: # Ensure data is not empty
-        # Assuming the first row is headers
-        df = pd.DataFrame(data[1:], columns=data[0])
+    if data and len(data) > 1: # Ensure data is not empty and has at least headers + one row
+        # Determine the actual number of columns from the first data row (after headers)
+        # This is the key fix: Use the length of the first data row to slice the headers
+        actual_num_columns = len(data[1]) if len(data) > 1 else 0
+        
+        # Ensure headers are sliced to match the actual number of columns in data rows
+        # If headers are shorter than actual data rows, it will take min length
+        # If headers are longer, it will slice them to actual_num_columns
+        headers = data[0][:actual_num_columns] if data[0] else []
+
+        df = pd.DataFrame(data[1:], columns=headers)
 
         # --- Data Processing for Dashboard ---
         # Ensure 'Munisipiu', 'Seksu', 'Idade', 'Dixiplina', 'Nivel Eskola', 'Naran Eskola', 'Titulu/Tópiku', 'Timestamp' columns exist
+        # Only check for these if they are relevant to your 33 columns.
+        # If your 33 columns don't include all of these, you might need to adjust your script's logic
+        # or confirm which columns are actually present and used.
         required_cols = ['Munisipiu', 'Seksu', 'Idade', 'Dixiplina', 'Nivel Eskola', 'Naran Eskola', 'Titulu/Tópiku', 'Timestamp']
         for col in required_cols:
             if col not in df.columns:
-                df[col] = 'N/A' # Add missing columns with a default value
+                # If a required column is truly missing from your 33, it will be added as 'N/A'
+                # This might indicate your sheet structure doesn't fully match the dashboard's needs.
+                df[col] = 'N/A' 
 
         # Convert 'Idade' to numeric, coercing errors to NaN
         df['Idade'] = pd.to_numeric(df['Idade'], errors='coerce')
@@ -112,7 +125,7 @@ try:
                     row[key] = str(value)
 
     else:
-        print("No data found in Google Sheet.")
+        print("No data found in Google Sheet or sheet is empty.")
 
 except requests.exceptions.RequestException as e:
     print(f"Error fetching data: {e}")
