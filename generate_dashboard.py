@@ -1,14 +1,13 @@
 import requests
 import pandas as pd
 import os
-import json # Import json for embedding data
+import json
 
 # --- Step 1: Securely get the API key from the environment variable ---
 api_key = os.getenv("GOOGLE_SHEET_API_KEY")
 sheet_id = '1MYTD8Z_F408OPRSJos8JWS_0tgvM9Dmo6wlVKfZjrmM' # Replace with your Sheet ID if it's different
 
 # --- Step 2: Fetch data from the Google Sheets API ---
-# Initialize dashboardData with default empty structures
 dashboard_data = {
     "totalMunicipality": 0,
     "municipalityChartData": {"labels": [], "data": []},
@@ -26,41 +25,69 @@ dashboard_data = {
     "allNivelEskolaOptions": ["All"],
     "allMunisipiuOptions": ["All"],
     "detailedTableData": [],
-    "municipalityPieChartData": {"labels": [], "data": []} # This was used for municipalityChart
+    "municipalityPieChartData": {"labels": [], "data": []}
 }
 
 try:
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/dadus?key={api_key}"
     response = requests.get(url)
-    response.raise_for_status() # This will raise an HTTPError for bad responses (4xx or 5xx)
+    response.raise_for_status()
     data = response.json().get('values', [])
 
-    if data and len(data) > 1: # Ensure data is not empty and has at least headers + one row
-        # Determine the actual number of columns from the first data row (after headers)
-        # This is the key fix: Use the length of the first data row to slice the headers
-        actual_num_columns = len(data[1]) if len(data) > 1 else 0
-        
-        # Ensure headers are sliced to match the actual number of columns in data rows
-        # If headers are shorter than actual data rows, it will take min length
-        # If headers are longer, it will slice them to actual_num_columns
-        headers = data[0][:actual_num_columns] if data[0] else []
+    # --- DEBUG PRINT: Raw data fetched from Google Sheets ---
+    print("--- Raw data fetched (first 5 rows): ---")
+    for i, row in enumerate(data):
+        if i < 5:
+            print(row)
+        else:
+            break
+    print("------------------------------------------")
 
-        df = pd.DataFrame(data[1:], columns=headers)
+    if data and len(data) > 0:
+        headers = data[0]
+        data_rows = data[1:]
+
+        max_data_cols = 0
+        if data_rows:
+            max_data_cols = max(len(row) for row in data_rows)
+        
+        actual_headers = headers[:max_data_cols] if max_data_cols > 0 else headers
+
+        padded_data_rows = []
+        for row in data_rows:
+            padded_row = row + [None] * (len(actual_headers) - len(row))
+            padded_data_rows.append(padded_row)
+
+        df = pd.DataFrame(padded_data_rows, columns=actual_headers)
+
+        # --- DEBUG PRINT: DataFrame head and columns ---
+        print("--- DataFrame Head: ---")
+        print(df.head())
+        print("--- DataFrame Columns: ---")
+        print(df.columns.tolist())
+        print("--------------------------")
 
         # --- Data Processing for Dashboard ---
-        # Ensure 'Munisipiu', 'Seksu', 'Idade', 'Dixiplina', 'Nivel Eskola', 'Naran Eskola', 'Titulu/Tópiku', 'Timestamp' columns exist
-        # Only check for these if they are relevant to your 33 columns.
-        # If your 33 columns don't include all of these, you might need to adjust your script's logic
-        # or confirm which columns are actually present and used.
         required_cols = ['Munisipiu', 'Seksu', 'Idade', 'Dixiplina', 'Nivel Eskola', 'Naran Eskola', 'Titulu/Tópiku', 'Timestamp']
         for col in required_cols:
             if col not in df.columns:
-                # If a required column is truly missing from your 33, it will be added as 'N/A'
-                # This might indicate your sheet structure doesn't fully match the dashboard's needs.
+                print(f"WARNING: Required column '{col}' not found in DataFrame. Adding as 'N/A'.")
                 df[col] = 'N/A' 
 
         # Convert 'Idade' to numeric, coercing errors to NaN
+        # --- DEBUG PRINT: Idade column before conversion ---
+        print("--- Idade column before numeric conversion: ---")
+        print(df['Idade'].head())
         df['Idade'] = pd.to_numeric(df['Idade'], errors='coerce')
+        # --- DEBUG PRINT: Idade column after conversion ---
+        print("--- Idade column after numeric conversion: ---")
+        print(df['Idade'].head())
+        print("---------------------------------------------")
+
+        # --- DEBUG PRINT: Seksu column value counts ---
+        print("--- Seksu column value_counts: ---")
+        print(df['Seksu'].value_counts(dropna=False)) # Include NaN for debugging
+        print("----------------------------------")
 
         # Total Municipality
         dashboard_data["totalMunicipality"] = df['Munisipiu'].nunique()
@@ -69,11 +96,11 @@ try:
         municipality_counts = df['Munisipiu'].value_counts().sort_index()
         dashboard_data["municipalityChartData"]["labels"] = municipality_counts.index.tolist()
         dashboard_data["municipalityChartData"]["data"] = municipality_counts.values.tolist()
-        dashboard_data["municipalityPieChartData"] = dashboard_data["municipalityChartData"] # Use same for pie as it was used for bar
+        dashboard_data["municipalityPieChartData"] = dashboard_data["municipalityChartData"]
 
         # Total Gender and Gender Chart Data
         gender_counts = df['Seksu'].value_counts()
-        dashboard_data["totalGender"] = len(df) # Total participants
+        dashboard_data["totalGender"] = len(df)
         dashboard_data["genderChartData"]["labels"] = gender_counts.index.tolist()
         dashboard_data["genderChartData"]["data"] = gender_counts.values.tolist()
         dashboard_data["genderChartData"]["percentages"] = [f"{ (val / dashboard_data['totalGender'] * 100):.1f}%" for val in gender_counts.values]
@@ -83,7 +110,6 @@ try:
         dashboard_data["ageDistribution"] = {str(k): int(v) for k, v in age_distribution.items()}
         dashboard_data["ageChartData"]["labels"] = [str(age) for age in sorted(df['Idade'].dropna().unique().tolist())]
         dashboard_data["ageChartData"]["data"] = [int(age_distribution.get(label, 0)) for label in dashboard_data["ageChartData"]["labels"]]
-
 
         # School Level Counts and Chart Data
         school_level_counts = df['Nivel Eskola'].value_counts().sort_index()
@@ -112,14 +138,11 @@ try:
         dashboard_data["allMunisipiuOptions"] = ["All"] + sorted(df['Munisipiu'].dropna().unique().tolist())
 
         # Detailed Table Data
-        # Ensure 'id' is unique for React keys if needed, here just using index
         dashboard_data["detailedTableData"] = df.reset_index().rename(columns={'index': 'id'}).to_dict(orient='records')
-        # Convert numeric IDs to string to avoid potential JS issues with number keys
         for row in dashboard_data["detailedTableData"]:
             row['id'] = str(row['id'])
-            # Convert any numeric values in detailedTableData back to string if they are supposed to be displayed as is
             for key, value in row.items():
-                if pd.isna(value): # Handle NaN values from 'coerce'
+                if pd.isna(value):
                     row[key] = 'N/A'
                 elif isinstance(value, (int, float)):
                     row[key] = str(value)
@@ -129,15 +152,10 @@ try:
 
 except requests.exceptions.RequestException as e:
     print(f"Error fetching data: {e}")
-    # Keep default empty dashboard_data
 except Exception as e:
     print(f"An unexpected error occurred during data processing: {e}")
-    # Keep default empty dashboard_data
 
 # --- Step 3: Define the full HTML content with embedded data ---
-# This is the complete HTML structure including all charts, tables, and styles.
-# The dashboard_data will be injected as a JSON string.
-
 html_content = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -744,15 +762,3 @@ html_content = f"""
     </script>
 </body>
 </html>
-"""
-
-# --- Step 4: Write the HTML content to the index.html file ---
-# This is the crucial part that was missing or incomplete.
-# Ensure this section is present and correct in your generate_dashboard.py file.
-try:
-    with open('index.html', 'w', encoding='utf-8') as f:
-        f.write(html_content)
-    print("index.html generated successfully with updated data.")
-except Exception as e:
-    print(f"Error writing index.html: {e}")
-
