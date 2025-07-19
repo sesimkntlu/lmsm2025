@@ -3,6 +3,17 @@ import pandas as pd
 import os
 import json
 import re # Import regex module for cleaning
+import traceback # Import traceback for detailed error logging
+
+# Helper function to clean a single header string
+def clean_header_string(header):
+    # Remove text after newline, including the newline itself
+    cleaned = header.split('\n')[0].strip()
+    # Remove text in parentheses (e.g., "(Kanorin 1)")
+    cleaned = re.sub(r'\s*\(.*\)', '', cleaned).strip()
+    # Remove asterisks and extra spaces
+    cleaned = cleaned.replace('*', '').strip()
+    return cleaned
 
 # --- Step 1: Securely get the API key from the environment variable ---
 api_key = os.getenv("GOOGLE_SHEET_API_KEY")
@@ -48,121 +59,146 @@ try:
         raw_headers = data[0]
         data_rows = data[1:]
 
-        # --- NEW: Clean the headers ---
-        cleaned_headers = []
-        for header in raw_headers:
-            # Remove text after newline
-            cleaned_header = header.split('\\n')[0]
-            # Remove text in parentheses (e.g., "(Kanorin 1)")
-            cleaned_header = re.sub(r'\s*\(.*\)', '', cleaned_header)
-            # Remove leading/trailing whitespace
-            cleaned_header = cleaned_header.strip()
-            cleaned_headers.append(cleaned_header)
+        # Create DataFrame with raw headers first
+        df = pd.DataFrame(data_rows, columns=raw_headers)
 
-        # Determine the maximum number of columns found in the data rows
-        max_data_cols = 0
-        if data_rows:
-            max_data_cols = max(len(row) for row in data_rows)
-        
-        # Slice cleaned headers to match the max number of columns in data rows
-        actual_headers = cleaned_headers[:max_data_cols] if max_data_cols > 0 else cleaned_headers
+        # --- NEW: Explicitly rename columns using the cleaning function ---
+        # Create a dictionary for renaming: {old_name: new_cleaned_name}
+        rename_map = {col: clean_header_string(col) for col in df.columns}
+        df.rename(columns=rename_map, inplace=True)
 
-        # Create DataFrame, handling potential row length mismatches by padding with None
-        padded_data_rows = []
-        for row in data_rows:
-            padded_row = row + [None] * (len(actual_headers) - len(row))
-            padded_data_rows.append(padded_row)
+        # --- Handle duplicate column names that might arise after cleaning ---
+        # E.g., 'Seksu (Kanorin 1)' and 'Seksu (Kanorin 2)' both become 'Seksu'
+        cols = pd.Series(df.columns)
+        for dup in cols[cols.duplicated()].unique():
+            cols[cols[cols == dup].index.values.tolist()] = [dup + '_' + str(i) if i != 0 else dup for i in range(len(cols[cols == dup]))]
+        df.columns = cols
 
-        df = pd.DataFrame(padded_data_rows, columns=actual_headers)
-
-        # --- DEBUG PRINT: DataFrame head and columns (after cleaning) ---
-        print("--- DataFrame Head (after cleaning): ---")
+        # --- DEBUG PRINT: DataFrame head and columns (after ALL cleaning and renaming) ---
+        print("--- DataFrame Head (after ALL cleaning and renaming): ---")
         print(df.head())
-        print("--- DataFrame Columns (after cleaning): ---")
+        print("--- DataFrame Columns (after ALL cleaning and renaming): ---")
         print(df.columns.tolist())
         print("-----------------------------------------")
 
-        # --- Data Processing for Dashboard ---
-        # These required_cols should now exactly match the cleaned headers
-        required_cols = ['Munisipiu', 'Seksu', 'Idade', 'Dixiplina', 'Nivel Eskola', 'Naran Eskola', 'Titulu/Tópiku', 'Timestamp']
-        for col in required_cols:
-            if col not in df.columns:
-                # This warning should ideally not appear if cleaning is perfect and columns exist
-                print(f"WARNING: Required column '{col}' still not found after cleaning headers. Adding as 'N/A'.")
-                df[col] = 'N/A' 
+        # --- Data Aggregation for Dashboard Statistics ---
+        # Identify all Seksu and Idade columns based on their *newly unique* cleaned names
+        sek_cols_for_melt = [col for col in df.columns if col.startswith('Seksu')]
+        idade_cols_for_melt = [col for col in df.columns if col.startswith('Idade')]
 
-        # Convert 'Idade' to numeric, coercing errors to NaN
-        # --- DEBUG PRINT: Idade column before conversion ---
-        print("--- Idade column before numeric conversion: ---")
-        print(df['Idade'].head())
-        df['Idade'] = pd.to_numeric(df['Idade'], errors='coerce')
-        # --- DEBUG PRINT: Idade column after conversion ---
-        print("--- Idade column after numeric conversion: ---")
-        print(df['Idade'].head())
-        print("---------------------------------------------")
+        # Create a list of DataFrames for each 'Kanorin' entry for aggregation
+        processed_records = []
+        # Iterate over the original number of Kanorin entries (assuming 3)
+        for i in range(1, 4):
+            seksu_col_name = f'Seksu_{i}' if i > 1 else 'Seksu' # Seksu, Seksu_2, Seksu_3
+            idade_col_name = f'Idade_{i}' if i > 1 else 'Idade' # Idade, Idade_2, Idade_3
 
-        # --- DEBUG PRINT: Seksu column value counts ---
-        print("--- Seksu column value_counts: ---")
-        print(df['Seksu'].value_counts(dropna=False)) # Include NaN for debugging
-        print("----------------------------------")
+            # Check if these specific (now unique) columns exist in the DataFrame
+            if seksu_col_name in df.columns and idade_col_name in df.columns:
+                temp_df = df[[
+                    'Munisipiu', 'Nivel Eskola', 'Naran Eskola',
+                    'Dixiplina', 'Titulu/Tópiku Atividade', # This is the cleaned name now
+                    seksu_col_name, idade_col_name
+                ]].copy()
+                temp_df.rename(columns={
+                    seksu_col_name: 'Seksu', # Rename back to simple 'Seksu' for aggregation
+                    idade_col_name: 'Idade',   # Rename back to simple 'Idade' for aggregation
+                    'Titulu/Tópiku Atividade': 'Titulu/Tópiku' # Standardize for dashboard
+                }, inplace=True)
+                processed_records.append(temp_df)
 
-        # Total Municipality
-        dashboard_data["totalMunicipality"] = df['Munisipiu'].nunique()
+        if processed_records:
+            # Concatenate all processed records into one DataFrame for aggregation
+            agg_df = pd.concat(processed_records, ignore_index=True)
+            
+            # Drop rows where Seksu or Idade are empty/None
+            agg_df = agg_df.dropna(subset=['Seksu', 'Idade'], how='all')
 
-        # Municipality Chart Data
-        municipality_counts = df['Munisipiu'].value_counts().sort_index()
-        dashboard_data["municipalityChartData"]["labels"] = municipality_counts.index.tolist()
-        dashboard_data["municipalityChartData"]["data"] = municipality_counts.values.tolist()
-        dashboard_data["municipalityPieChartData"] = dashboard_data["municipalityChartData"]
+            # Convert 'Idade' to numeric, coercing errors to NaN
+            print("--- Idade column before numeric conversion (agg_df): ---")
+            print(agg_df['Idade'].head())
+            agg_df['Idade'] = pd.to_numeric(agg_df['Idade'], errors='coerce')
+            print("--- Idade column after numeric conversion (agg_df): ---")
+            print(agg_df['Idade'].head())
+            print("---------------------------------------------")
 
-        # Total Gender and Gender Chart Data
-        gender_counts = df['Seksu'].value_counts()
-        dashboard_data["totalGender"] = len(df)
-        dashboard_data["genderChartData"]["labels"] = gender_counts.index.tolist()
-        dashboard_data["genderChartData"]["data"] = gender_counts.values.tolist()
-        dashboard_data["genderChartData"]["percentages"] = [f"{{{{ (val / dashboard_data['totalGender'] * 100):.1f}}}}%" for val in gender_counts.values]
+            # --- DEBUG PRINT: Seksu column value counts (agg_df) ---
+            print("--- Seksu column value_counts (agg_df): ---")
+            print(agg_df['Seksu'].value_counts(dropna=False))
+            print("----------------------------------")
 
-        # Age Distribution and Chart Data
-        age_distribution = df['Idade'].value_counts().sort_index().to_dict()
-        dashboard_data["ageDistribution"] = {str(k): int(v) for k, v in age_distribution.items()}
-        dashboard_data["ageChartData"]["labels"] = [str(age) for age in sorted(df['Idade'].dropna().unique().tolist())]
-        dashboard_data["ageChartData"]["data"] = [int(age_distribution.get(label, 0)) for label in dashboard_data["ageChartData"]["labels"]]
+            # --- Data Processing for Dashboard using agg_df ---
+            dashboard_data["totalMunicipality"] = agg_df['Munisipiu'].nunique() if 'Munisipiu' in agg_df.columns else 0
 
-        # School Level Counts and Chart Data
-        school_level_counts = df['Nivel Eskola'].value_counts().sort_index()
-        dashboard_data["schoolLevelCounts"] = school_level_counts.to_dict()
-        dashboard_data["schoolLevelChartData"]["labels"] = school_level_counts.index.tolist()
-        dashboard_data["schoolLevelChartData"]["data"] = school_level_counts.values.tolist()
+            municipality_counts = agg_df['Munisipiu'].value_counts().sort_index() if 'Munisipiu' in agg_df.columns else pd.Series()
+            dashboard_data["municipalityChartData"]["labels"] = municipality_counts.index.tolist()
+            dashboard_data["municipalityChartData"]["data"] = municipality_counts.values.tolist()
+            dashboard_data["municipalityPieChartData"] = dashboard_data["municipalityChartData"]
 
-        # School Municipality Table Data
-        school_municipality_grouped = df.groupby(['Munisipiu', 'Naran Eskola']).size().reset_index(name='Total')
-        dashboard_data["schoolMunicipalityTableData"] = school_municipality_grouped.to_dict(orient='records')
+            gender_counts = agg_df['Seksu'].value_counts() if 'Seksu' in agg_df.columns else pd.Series()
+            dashboard_data["totalGender"] = len(agg_df) # Total individual Seksu entries
+            dashboard_data["genderChartData"]["labels"] = gender_counts.index.tolist()
+            dashboard_data["genderChartData"]["data"] = gender_counts.values.tolist()
+            dashboard_data["genderChartData"]["percentages"] = [f"{{{{ (val / dashboard_data['totalGender'] * 100):.1f}}}}%" for val in gender_counts.values] if dashboard_data['totalGender'] > 0 else []
 
-        # Total Discipline and Discipline Chart Data
-        discipline_counts = df['Dixiplina'].value_counts().sort_index()
-        dashboard_data["totalDiscipline"] = df['Dixiplina'].nunique()
-        dashboard_data["disciplineCounts"] = discipline_counts.to_dict()
-        dashboard_data["disciplineChartData"]["labels"] = discipline_counts.index.tolist()
-        dashboard_data["disciplineChartData"]["data"] = discipline_counts.values.tolist()
+            age_distribution = agg_df['Idade'].value_counts().sort_index().to_dict() if 'Idade' in agg_df.columns else {}
+            dashboard_data["ageDistribution"] = {str(k): int(v) for k, v in age_distribution.items()}
+            dashboard_data["ageChartData"]["labels"] = [str(age) for age in sorted(agg_df['Idade'].dropna().unique().tolist())] if 'Idade' in agg_df.columns else []
+            dashboard_data["ageChartData"]["data"] = [int(age_distribution.get(label, 0)) for label in dashboard_data["ageChartData"]["labels"]]
 
-        # Total Topiku
-        dashboard_data["totalTopiku"] = df['Titulu/Tópiku'].nunique()
+            school_level_counts = agg_df['Nivel Eskola'].value_counts().sort_index() if 'Nivel Eskola' in agg_df.columns else pd.Series()
+            dashboard_data["schoolLevelCounts"] = school_level_counts.to_dict()
+            dashboard_data["schoolLevelChartData"]["labels"] = school_level_counts.index.tolist()
+            dashboard_data["schoolLevelChartData"]["data"] = school_level_counts.values.tolist()
 
-        # All Nivel Eskola Options
-        dashboard_data["allNivelEskolaOptions"] = ["All"] + sorted(df['Nivel Eskola'].dropna().unique().tolist())
+            school_municipality_grouped = agg_df.groupby(['Munisipiu', 'Naran Eskola']).size().reset_index(name='Total') if 'Munisipiu' in agg_df.columns and 'Naran Eskola' in agg_df.columns else pd.DataFrame()
+            dashboard_data["schoolMunicipalityTableData"] = school_municipality_grouped.to_dict(orient='records')
 
-        # All Munisipiu Options
-        dashboard_data["allMunisipiuOptions"] = ["All"] + sorted(df['Munisipiu'].dropna().unique().tolist())
+            discipline_counts = agg_df['Dixiplina'].value_counts().sort_index() if 'Dixiplina' in agg_df.columns else pd.Series()
+            dashboard_data["totalDiscipline"] = agg_df['Dixiplina'].nunique() if 'Dixiplina' in agg_df.columns else 0
+            dashboard_data["disciplineCounts"] = discipline_counts.to_dict()
+            dashboard_data["disciplineChartData"]["labels"] = discipline_counts.index.tolist()
+            dashboard_data["disciplineChartData"]["data"] = discipline_counts.values.tolist()
 
-        # Detailed Table Data
-        dashboard_data["detailedTableData"] = df.reset_index().rename(columns={'index': 'id'}).to_dict(orient='records')
-        for row in dashboard_data["detailedTableData"]:
-            row['id'] = str(row['id'])
-            for key, value in row.items():
-                if pd.isna(value):
-                    row[key] = 'N/A'
-                elif isinstance(value, (int, float)):
-                    row[key] = str(value)
+            dashboard_data["totalTopiku"] = agg_df['Titulu/Tópiku'].nunique() if 'Titulu/Tópiku' in agg_df.columns else 0
+
+            dashboard_data["allNivelEskolaOptions"] = ["All"] + sorted(agg_df['Nivel Eskola'].dropna().unique().tolist()) if 'Nivel Eskola' in agg_df.columns else ["All"]
+            dashboard_data["allMunisipiuOptions"] = ["All"] + sorted(agg_df['Munisipiu'].dropna().unique().tolist()) if 'Munisipiu' in agg_df.columns else ["All"]
+
+            # Detailed Table Data - Use the original df (with cleaned and unique headers) for this
+            detailed_data_for_html = []
+            for index, row in df.iterrows():
+                row_dict = {}
+                row_dict['Munisipiu'] = row.get('Munisipiu', 'N/A')
+                
+                # Combine all Seksu and Idade values for display in the detailed table
+                all_seksu_in_row = [row[col] for col in sek_cols_for_melt if pd.notna(row[col]) and row[col] != '']
+                all_idade_in_row = [row[col] for col in idade_cols_for_melt if pd.notna(row[col]) and row[col] != '']
+
+                row_dict['Seksu'] = ', '.join(all_seksu_in_row) if all_seksu_in_row else 'N/A'
+                row_dict['Idade'] = ', '.join(map(str, all_idade_in_row)) if all_idade_in_row else 'N/A'
+                
+                row_dict['Dixiplina'] = row.get('Dixiplina', 'N/A')
+                row_dict['Nivel Eskola'] = row.get('Nivel Eskola', 'N/A')
+                row_dict['Naran Eskola'] = row.get('Naran Eskola', 'N/A')
+                row_dict['Titulu/Tópiku'] = row.get('Titulu/Tópiku Atividade', 'N/A') # Use the actual cleaned name
+                row_dict['Timestamp'] = row.get('Timestamp', 'N/A')
+                
+                detailed_data_for_html.append(row_dict)
+
+            dashboard_data["detailedTableData"] = detailed_data_for_html
+            
+            # Convert values to string and handle NaN/empty for detailed table
+            for row in dashboard_data["detailedTableData"]:
+                row['id'] = str(row.get('id', index)) # Use index as default id if not present
+                for key, value in row.items():
+                    if pd.isna(value) or value == '':
+                        row[key] = 'N/A'
+                    elif isinstance(value, (int, float)):
+                        row[key] = str(value)
+        else:
+            dashboard_data["detailedTableData"] = []
+
 
     else:
         print("No data found in Google Sheet or sheet is empty.")
@@ -171,6 +207,9 @@ except requests.exceptions.RequestException as e:
     print(f"Error fetching data: {e}")
 except Exception as e:
     print(f"An unexpected error occurred during data processing: {e}")
+    # Print full traceback for better debugging
+    traceback.print_exc()
+
 
 # --- Step 3: Define the full HTML content with embedded data ---
 html_content = f"""
@@ -790,4 +829,3 @@ try:
     print("index.html generated successfully with updated data.")
 except Exception as e:
     print(f"Error writing index.html: {e}")
-
