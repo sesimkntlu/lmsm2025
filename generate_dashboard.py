@@ -105,6 +105,15 @@ try:
         print(df.columns.tolist())
         print("-----------------------------------------")
 
+        # --- DEBUG PRINT: Munisípiu column value_counts (df) ---
+        if 'Munisípiu' in df.columns:
+            print("--- Munisípiu column value_counts (df, before aggregation): ---")
+            print(df['Munisípiu'].value_counts(dropna=False))
+            print("----------------------------------")
+        else:
+            print("--- WARNING: 'Munisípiu' column not found in df after cleaning. ---")
+
+
         # --- Data Aggregation for Dashboard Statistics ---
         # Identify all Seksu and Idade columns based on their *newly unique* cleaned names
         sek_cols_for_melt = [col for col in df.columns if col.startswith('Seksu') and not col.endswith('_Manorin')]
@@ -132,6 +141,11 @@ try:
             # Concatenate all processed records into one DataFrame for aggregation
             agg_df = pd.concat(processed_records, ignore_index=True)
             
+            # Clean whitespace from 'Munisipiu' and replace empty strings with NaN
+            if 'Munisipiu' in agg_df.columns:
+                agg_df['Munisipiu'] = agg_df['Munisipiu'].astype(str).str.strip()
+                agg_df['Munisipiu'] = agg_df['Munisipiu'].replace('', pd.NA) # Replace empty strings with NA
+            
             # Drop rows where Seksu or Idade are empty/None
             agg_df = agg_df.dropna(subset=['Seksu', 'Idade'], how='all')
 
@@ -148,16 +162,27 @@ try:
             print(agg_df['Seksu'].value_counts(dropna=False))
             print("----------------------------------")
 
+            # --- DEBUG PRINT: Munisipiu column value_counts (agg_df) ---
+            if 'Munisipiu' in agg_df.columns:
+                print("--- Munisipiu column value_counts (agg_df, after aggregation and cleaning): ---")
+                print(agg_df['Munisipiu'].value_counts(dropna=False))
+                print("----------------------------------")
+            else:
+                print("--- WARNING: 'Munisipiu' column not found in agg_df after aggregation. ---")
+
+
             # --- Data Processing for Dashboard using agg_df ---
-            dashboard_data["totalMunicipality"] = agg_df['Munisipiu'].nunique() if 'Munisipiu' in agg_df.columns else 0
+            dashboard_data["totalMunicipality"] = agg_df['Munisipiu'].nunique(dropna=True) if 'Munisipiu' in agg_df.columns else 0
 
             municipality_counts = agg_df['Munisipiu'].value_counts().sort_index() if 'Munisipiu' in agg_df.columns else pd.Series()
+            # Filter out empty/NA values from labels and data for charts
+            municipality_counts = municipality_counts[municipality_counts.index.notna() & (municipality_counts.index != '')]
             dashboard_data["municipalityChartData"]["labels"] = municipality_counts.index.tolist()
             dashboard_data["municipalityChartData"]["data"] = municipality_counts.values.tolist()
             dashboard_data["municipalityPieChartData"] = dashboard_data["municipalityChartData"]
 
             gender_counts = agg_df['Seksu'].value_counts() if 'Seksu' in agg_df.columns else pd.Series()
-            dashboard_data["totalGender"] = len(agg_df) # Total individual Seksu entries
+            dashboard_data["totalGender"] = len(agg_df) # Total participants
             dashboard_data["genderChartData"]["labels"] = gender_counts.index.tolist()
             dashboard_data["genderChartData"]["data"] = gender_counts.values.tolist()
             dashboard_data["genderChartData"]["percentages"] = [f"{{{{ (val / dashboard_data['totalGender'] * 100):.1f}}}}%" for val in gender_counts.values] if dashboard_data['totalGender'] > 0 else []
@@ -190,7 +215,7 @@ try:
             detailed_data_for_html = []
             for index, row in df.iterrows():
                 row_dict = {}
-                row_dict['Munisipiu'] = row.get('Munisípiu', 'N/A') # Corrected: Use 'Munisípiu' with accent
+                row_dict['Munisipiu'] = row.get('Munisípiu', 'N/A') # Use 'Munisípiu' with accent
                 
                 # Combine all Seksu and Idade values for display in the detailed table
                 all_seksu_in_row = [row[col] for col in sek_cols_for_melt if pd.notna(row[col]) and row[col] != '']
@@ -202,7 +227,7 @@ try:
                 row_dict['Dixiplina'] = row.get('Dixiplina', 'N/A')
                 row_dict['Nivel Eskola'] = row.get('Nivel Eskola', 'N/A')
                 row_dict['Naran Eskola'] = row.get('Naran Eskola', 'N/A')
-                row_dict['Titulu/Tópiku'] = row.get('Títulu/Tópiku Atividade', 'N/A') # Corrected: Use 'Títulu/Tópiku Atividade' with accent
+                row_dict['Titulu/Tópiku'] = row.get('Títulu/Tópiku Atividade', 'N/A') # Use 'Títulu/Tópiku Atividade' with accent
                 row_dict['Timestamp'] = row.get('Timestamp', 'N/A')
                 
                 detailed_data_for_html.append(row_dict)
@@ -850,3 +875,4 @@ try:
     print("index.html generated successfully with updated data.")
 except Exception as e:
     print(f"Error writing index.html: {e}")
+
