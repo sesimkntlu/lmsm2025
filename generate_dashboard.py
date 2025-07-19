@@ -43,7 +43,7 @@ dashboard_data = {
 try:
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/dadus?key={api_key}"
     response = requests.get(url)
-    response.raise_for_status()
+    response.raise_for_status() # This will raise an HTTPError for bad responses (4xx or 5xx)
     data = response.json().get('values', [])
 
     # --- DEBUG PRINT: Raw data fetched from Google Sheets ---
@@ -252,6 +252,7 @@ try:
 
 except requests.exceptions.RequestException as e:
     print(f"Error fetching data: {e}")
+    traceback.print_exc()
 except Exception as e:
     print(f"An unexpected error occurred during data processing: {e}")
     traceback.print_exc()
@@ -277,7 +278,7 @@ html_content = f"""
         }}
         
         body {{
-            background-image: url('https://placehold.co/1920x1080/E0E7FF/000000?text=Background+Image'); /* Placeholder for AY1A8030.jpg */
+            background-image: url('./assets/AY1A8030.jpg'); /* Updated: Suggested path for your background image */
             background-size: cover;
             background-repeat: no-repeat;
             background-position: center center;
