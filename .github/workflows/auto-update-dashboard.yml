@@ -9,9 +9,9 @@ on:
   workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
 
 permissions:
-  contents: write # Required to commit changes back to the repository
-  pages: write    # Required to deploy to GitHub Pages
-  id-token: write # Required for secure OIDC authentication with GitHub Pages
+  contents: write # Required to commit changes back to the repository (for peaceiris action)
+  # pages: write    # Not strictly needed for peaceiris, but harmless to keep
+  # id-token: write # Not strictly needed for peaceiris, but harmless to keep
 
 jobs:
   generate_and_deploy:
@@ -49,16 +49,13 @@ jobs:
           git add index.html # Add the modified index.html
           git diff --staged --quiet || (git commit -m "Auto-generate dashboard" && git push)
 
-      # --- GitHub Pages Deployment Steps ---
-      # These steps are essential for the updated index.html to show on your live site.
-      - name: Setup Pages
-        uses: actions/configure-pages@v4 # Configures GitHub Pages environment
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3 # Uploads the build artifact (your updated files)
-        with:
-          path: './' # Uploads all files in the root directory, including the updated index.html
-
+      # --- NEW DEPLOYMENT STEP USING peaceiris/actions-gh-pages ---
+      # This action handles pushing the built content to the gh-pages branch.
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v3 # Deploys the artifact to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3 # Using a different action for deployment
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }} # Automatically provided token for repository access
+          publish_dir: ./ # Specifies the directory to publish (your root, which contains index.html)
+          publish_branch: gh-pages # Specifies the branch to publish to
+          # Keep the commit message consistent or change as needed
+          commit_message: "Deploy dashboard updates [skip ci]" # Added [skip ci] to prevent infinite loops
