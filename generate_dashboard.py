@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 import os
-import json
+import json # Import json for embedding data
 import re # Import regex module for cleaning
 import traceback # Import traceback for detailed error logging
 
@@ -115,14 +115,15 @@ try:
         # Iterate over the identified Seksu/Idade columns
         for i, (sek_col, idade_col) in enumerate(zip(sek_cols_for_melt, idade_cols_for_melt)):
             temp_df = df[[
-                'Munisipiu', 'Nivel Eskola', 'Naran Eskola',
-                'Dixiplina', 'Titulu/Tópiku Atividade', # This is the cleaned name now
+                'Munisípiu', # Corrected: Use 'Munisípiu' with accent
+                'Nivel Eskola', 'Naran Eskola',
+                'Dixiplina', 'Títulu/Tópiku Atividade', # Corrected: Use 'Títulu/Tópiku Atividade' with accent
                 sek_col, idade_col
             ]].copy()
             temp_df.rename(columns={
                 sek_col: 'Seksu', # Rename back to simple 'Seksu' for aggregation
                 idade_col: 'Idade',   # Rename back to simple 'Idade' for aggregation
-                'Titulu/Tópiku Atividade': 'Titulu/Tópiku' # Standardize for dashboard
+                'Títulu/Tópiku Atividade': 'Titulu/Tópiku' # Standardize for dashboard
             }, inplace=True)
             processed_records.append(temp_df)
 
@@ -189,7 +190,7 @@ try:
             detailed_data_for_html = []
             for index, row in df.iterrows():
                 row_dict = {}
-                row_dict['Munisipiu'] = row.get('Munisipiu', 'N/A')
+                row_dict['Munisipiu'] = row.get('Munisípiu', 'N/A') # Corrected: Use 'Munisípiu' with accent
                 
                 # Combine all Seksu and Idade values for display in the detailed table
                 all_seksu_in_row = [row[col] for col in sek_cols_for_melt if pd.notna(row[col]) and row[col] != '']
@@ -201,7 +202,7 @@ try:
                 row_dict['Dixiplina'] = row.get('Dixiplina', 'N/A')
                 row_dict['Nivel Eskola'] = row.get('Nivel Eskola', 'N/A')
                 row_dict['Naran Eskola'] = row.get('Naran Eskola', 'N/A')
-                row_dict['Titulu/Tópiku'] = row.get('Titulu/Tópiku Atividade', 'N/A') # Use the actual cleaned name
+                row_dict['Titulu/Tópiku'] = row.get('Títulu/Tópiku Atividade', 'N/A') # Corrected: Use 'Títulu/Tópiku Atividade' with accent
                 row_dict['Timestamp'] = row.get('Timestamp', 'N/A')
                 
                 detailed_data_for_html.append(row_dict)
@@ -849,4 +850,3 @@ try:
     print("index.html generated successfully with updated data.")
 except Exception as e:
     print(f"Error writing index.html: {e}")
-
