@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 import os
 import json
+import re # Import regex module for cleaning
 
 # --- Step 1: Securely get the API key from the environment variable ---
 api_key = os.getenv("GOOGLE_SHEET_API_KEY")
@@ -44,15 +45,29 @@ try:
     print("------------------------------------------")
 
     if data and len(data) > 0:
-        headers = data[0]
+        raw_headers = data[0]
         data_rows = data[1:]
 
+        # --- NEW: Clean the headers ---
+        cleaned_headers = []
+        for header in raw_headers:
+            # Remove text after newline
+            cleaned_header = header.split('\\n')[0]
+            # Remove text in parentheses (e.g., "(Kanorin 1)")
+            cleaned_header = re.sub(r'\s*\(.*\)', '', cleaned_header)
+            # Remove leading/trailing whitespace
+            cleaned_header = cleaned_header.strip()
+            cleaned_headers.append(cleaned_header)
+
+        # Determine the maximum number of columns found in the data rows
         max_data_cols = 0
         if data_rows:
             max_data_cols = max(len(row) for row in data_rows)
         
-        actual_headers = headers[:max_data_cols] if max_data_cols > 0 else headers
+        # Slice cleaned headers to match the max number of columns in data rows
+        actual_headers = cleaned_headers[:max_data_cols] if max_data_cols > 0 else cleaned_headers
 
+        # Create DataFrame, handling potential row length mismatches by padding with None
         padded_data_rows = []
         for row in data_rows:
             padded_row = row + [None] * (len(actual_headers) - len(row))
@@ -60,18 +75,20 @@ try:
 
         df = pd.DataFrame(padded_data_rows, columns=actual_headers)
 
-        # --- DEBUG PRINT: DataFrame head and columns ---
-        print("--- DataFrame Head: ---")
+        # --- DEBUG PRINT: DataFrame head and columns (after cleaning) ---
+        print("--- DataFrame Head (after cleaning): ---")
         print(df.head())
-        print("--- DataFrame Columns: ---")
+        print("--- DataFrame Columns (after cleaning): ---")
         print(df.columns.tolist())
-        print("--------------------------")
+        print("-----------------------------------------")
 
         # --- Data Processing for Dashboard ---
+        # These required_cols should now exactly match the cleaned headers
         required_cols = ['Munisipiu', 'Seksu', 'Idade', 'Dixiplina', 'Nivel Eskola', 'Naran Eskola', 'Titulu/Tópiku', 'Timestamp']
         for col in required_cols:
             if col not in df.columns:
-                print(f"WARNING: Required column '{col}' not found in DataFrame. Adding as 'N/A'.")
+                # This warning should ideally not appear if cleaning is perfect and columns exist
+                print(f"WARNING: Required column '{col}' still not found after cleaning headers. Adding as 'N/A'.")
                 df[col] = 'N/A' 
 
         # Convert 'Idade' to numeric, coercing errors to NaN
