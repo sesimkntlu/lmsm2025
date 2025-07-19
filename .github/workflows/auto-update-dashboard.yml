@@ -9,9 +9,9 @@ on:
   workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
 
 permissions:
-  contents: write # Required to commit changes back to the repository
-  pages: write    # Required to deploy to GitHub Pages
-  id-token: write # Required for secure OIDC authentication with GitHub Pages
+  contents: write # Required to commit changes back to the repository (for peaceiris action)
+  # pages: write    # Not strictly needed for peaceiris, but harmless to keep
+  # id-token: write # Not strictly needed for peaceiris, but harmless to keep
 
 jobs:
   generate_and_deploy:
@@ -28,18 +28,15 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip # Upgrades pip
-          pip install -r requirements.txt # <<<--- THIS IS THE CRUCIAL CHANGE!
-                                          # It will now install Pillow (and any other dependencies)
-                                          # from your requirements.txt file.
+          pip install -r requirements.txt # Installs dependencies listed in requirements.txt (requests, pandas, Pillow)
 
       - name: Run dashboard script
         # This step executes your Python script.
-        # It will read the image and update index.html on the GitHub runner.
+        # It will read data from Google Sheets and update index.html on the GitHub runner.
         run: python generate_dashboard.py
         env:
-          # If your generate_dashboard.py also uses Google Sheets API,
-          # ensure these environment variables are correctly passed as GitHub Secrets.
-          # If not, you can remove them.
+          # These environment variables must be configured as GitHub Secrets
+          # in your repository settings (Settings -> Secrets and variables -> Actions).
           GOOGLE_SHEET_API_KEY: ${{ secrets.GOOGLE_SHEET_API_KEY }}
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
 
@@ -52,16 +49,13 @@ jobs:
           git add index.html # Add the modified index.html
           git diff --staged --quiet || (git commit -m "Auto-generate dashboard" && git push)
 
-      # --- GitHub Pages Deployment Steps ---
-      # These steps are essential for the updated index.html to show on your live site.
-      - name: Setup Pages
-        uses: actions/configure-pages@v4 # Configures GitHub Pages environment
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3 # Uploads the build artifact (your updated files)
-        with:
-          path: './' # Uploads all files in the root directory, including the updated index.html
-
+      # --- NEW DEPLOYMENT STEP USING peaceiris/actions-gh-pages ---
+      # This action handles pushing the built content to the gh-pages branch.
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v3 # Deploys the artifact to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3 # Using a different action for deployment
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }} # Automatically provided token for repository access
+          publish_dir: ./ # Specifies the directory to publish (your root, which contains index.html)
+          publish_branch: gh-pages # Specifies the branch to publish to
+          # Keep the commit message consistent or change as needed
+          commit_message: "Deploy dashboard updates [skip ci]" # Added [skip ci] to prevent infinite loops
