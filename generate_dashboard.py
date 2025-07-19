@@ -124,12 +124,13 @@ try:
         # Iterate over the identified Seksu/Idade columns
         for i, (sek_col, idade_col) in enumerate(zip(sek_cols_for_melt, idade_cols_for_melt)):
             temp_df = df[[
-                'Munisípiu', # Corrected: Use 'Munisípiu' with accent
+                'Munisípiu', # Use 'Munisípiu' with accent here
                 'Nivel Eskola', 'Naran Eskola',
-                'Dixiplina', 'Títulu/Tópiku Atividade', # Corrected: Use 'Títulu/Tópiku Atividade' with accent
+                'Dixiplina', 'Títulu/Tópiku Atividade', # Use 'Títulu/Tópiku Atividade' with accent here
                 sek_col, idade_col
             ]].copy()
             temp_df.rename(columns={
+                'Munisípiu': 'Munisipiu', # NEW: Rename to 'Munisipiu' without accent for consistency
                 sek_col: 'Seksu', # Rename back to simple 'Seksu' for aggregation
                 idade_col: 'Idade',   # Rename back to simple 'Idade' for aggregation
                 'Títulu/Tópiku Atividade': 'Titulu/Tópiku' # Standardize for dashboard
@@ -253,7 +254,6 @@ except requests.exceptions.RequestException as e:
     print(f"Error fetching data: {e}")
 except Exception as e:
     print(f"An unexpected error occurred during data processing: {e}")
-    # Print full traceback for better debugging
     traceback.print_exc()
 
 
