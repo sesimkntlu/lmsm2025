@@ -59,8 +59,24 @@ try:
         raw_headers = data[0]
         data_rows = data[1:]
 
-        # Create DataFrame with raw headers first
-        df = pd.DataFrame(data_rows, columns=raw_headers)
+        # Determine the maximum number of columns in the data rows
+        max_data_cols = 0
+        if data_rows:
+            max_data_cols = max(len(row) for row in data_rows)
+        else:
+            print("No data rows found after headers.")
+            # If no data rows, create an empty DataFrame with cleaned headers
+            cleaned_headers_for_empty_df = [clean_header_string(h) for h in raw_headers]
+            df = pd.DataFrame(columns=cleaned_headers_for_empty_df)
+            # Skip further processing if no data
+            raise ValueError("No data rows to process.") # Raise to jump to exception handler
+
+        # Slice raw_headers to match the maximum number of columns in data_rows
+        # This is crucial to avoid the "columns passed, passed data had X columns" error
+        adjusted_raw_headers = raw_headers[:max_data_cols]
+
+        # Create DataFrame with the adjusted raw headers
+        df = pd.DataFrame(data_rows, columns=adjusted_raw_headers)
 
         # --- NEW: Explicitly rename columns using the cleaning function ---
         # Create a dictionary for renaming: {old_name: new_cleaned_name}
@@ -71,8 +87,16 @@ try:
         # E.g., 'Seksu (Kanorin 1)' and 'Seksu (Kanorin 2)' both become 'Seksu'
         cols = pd.Series(df.columns)
         for dup in cols[cols.duplicated()].unique():
-            cols[cols[cols == dup].index.values.tolist()] = [dup + '_' + str(i) if i != 0 else dup for i in range(len(cols[cols == dup]))]
+            # Append _1, _2, _3 etc. to duplicates
+            # The first occurrence keeps the original cleaned name
+            indices_of_dup = cols[cols == dup].index.values.tolist()
+            for i, idx in enumerate(indices_of_dup):
+                if i == 0:
+                    cols[idx] = dup # First occurrence remains 'Seksu' or 'Idade'
+                else:
+                    cols[idx] = f"{dup}_{i}" # Subsequent occurrences get _1, _2, etc. (Seksu_1, Seksu_2)
         df.columns = cols
+
 
         # --- DEBUG PRINT: DataFrame head and columns (after ALL cleaning and renaming) ---
         print("--- DataFrame Head (after ALL cleaning and renaming): ---")
@@ -83,29 +107,25 @@ try:
 
         # --- Data Aggregation for Dashboard Statistics ---
         # Identify all Seksu and Idade columns based on their *newly unique* cleaned names
-        sek_cols_for_melt = [col for col in df.columns if col.startswith('Seksu')]
-        idade_cols_for_melt = [col for col in df.columns if col.startswith('Idade')]
+        sek_cols_for_melt = [col for col in df.columns if col.startswith('Seksu') and not col.endswith('_Manorin')]
+        idade_cols_for_melt = [col for col in df.columns if col.startswith('Idade') and not col.endswith('_Manorin')]
 
         # Create a list of DataFrames for each 'Kanorin' entry for aggregation
         processed_records = []
-        # Iterate over the original number of Kanorin entries (assuming 3)
-        for i in range(1, 4):
-            seksu_col_name = f'Seksu_{i}' if i > 1 else 'Seksu' # Seksu, Seksu_2, Seksu_3
-            idade_col_name = f'Idade_{i}' if i > 1 else 'Idade' # Idade, Idade_2, Idade_3
+        # Iterate over the identified Seksu/Idade columns
+        for i, (sek_col, idade_col) in enumerate(zip(sek_cols_for_melt, idade_cols_for_melt)):
+            temp_df = df[[
+                'Munisipiu', 'Nivel Eskola', 'Naran Eskola',
+                'Dixiplina', 'Titulu/Tópiku Atividade', # This is the cleaned name now
+                sek_col, idade_col
+            ]].copy()
+            temp_df.rename(columns={
+                sek_col: 'Seksu', # Rename back to simple 'Seksu' for aggregation
+                idade_col: 'Idade',   # Rename back to simple 'Idade' for aggregation
+                'Titulu/Tópiku Atividade': 'Titulu/Tópiku' # Standardize for dashboard
+            }, inplace=True)
+            processed_records.append(temp_df)
 
-            # Check if these specific (now unique) columns exist in the DataFrame
-            if seksu_col_name in df.columns and idade_col_name in df.columns:
-                temp_df = df[[
-                    'Munisipiu', 'Nivel Eskola', 'Naran Eskola',
-                    'Dixiplina', 'Titulu/Tópiku Atividade', # This is the cleaned name now
-                    seksu_col_name, idade_col_name
-                ]].copy()
-                temp_df.rename(columns={
-                    seksu_col_name: 'Seksu', # Rename back to simple 'Seksu' for aggregation
-                    idade_col_name: 'Idade',   # Rename back to simple 'Idade' for aggregation
-                    'Titulu/Tópiku Atividade': 'Titulu/Tópiku' # Standardize for dashboard
-                }, inplace=True)
-                processed_records.append(temp_df)
 
         if processed_records:
             # Concatenate all processed records into one DataFrame for aggregation
@@ -829,3 +849,4 @@ try:
     print("index.html generated successfully with updated data.")
 except Exception as e:
     print(f"Error writing index.html: {e}")
+
